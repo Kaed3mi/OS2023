@@ -2,6 +2,7 @@
 #First you can use grep (-n) to find the number of lines of string.
 #Then you can use awk to separate the answer.
 grep -n $2 $1 | awk '{
-	print substr($1, 1, length($1)-1)
+	split($1, arr, ":")
+	print arr[1]
 	}' > $3
 
