@@ -26,10 +26,9 @@ char *strncpy(char *dst, const char *src, size_t n) {
 char *strcat(char *dst, const char *src) {
 	size_t dst_len = strlen(dst);
 	size_t i;
-	for (i = 0; src[i] != '\0'; i++) {
+	for (i = 0; src[i] != '\0'; i++) 
 		dst[dst_len + i] = src[i];
-		dst[dst_len + i] = '\0';
-	}
+	dst[dst_len + i] = '\0';
 	return dst;
 }
 
@@ -75,13 +74,12 @@ int memcmp(const void *s1, const void *s2, size_t n) {
 		char *ps1 = (char*)s1;
 		char *ps2 = (char*)s2;
 		while (n--) {
-			 if (*ps1 && *ps2 && (*ps1 == *ps2)) {
-				continue;
-			 } else {
-				 break;
-			 }
+			 if (*ps1 != *ps2)
+				return (*ps1 - *ps2);
+			 if (*ps1 == '\0')
+				 return 0;
 			 ps1++;
 			 ps2++;
 		}
-	return (*ps1 - *ps2);
+	return 0;
 }
