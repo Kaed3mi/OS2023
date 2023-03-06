@@ -1,6 +1,6 @@
 #!bin/bash
 mkdir mydir
-chmod a+7 mydir
+chmod a+rwx mydir
 echo 2023 > myfile
 mv moveme mydir
 mv copyme mydir/copied
