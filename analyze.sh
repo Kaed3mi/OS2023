@@ -2,7 +2,8 @@
 
 if [ $# -eq 1 ];
 then
-    # Your code here. (1/4)
+	grep -E 'WARN|ERROR' $1 > bug.txt
+    # Your code here. (1/4)i
 
 else
     case $2 in
