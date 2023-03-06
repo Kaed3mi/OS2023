@@ -15,9 +15,10 @@ else
 	grep $3 $1 > $3.txt;
     ;;
     "--diff")
-    	echo di
-        # Your code here. (4/4)
-	
+    	diff -b $1 $3 > /dev/null
+        if [ $? -eq 0 ]; then echo same; fi
+    	diff -b $1 $3 > /dev/null
+	if [ $? -ne 0 ]; then echo different; fi
     ;;
     esac
 fi
