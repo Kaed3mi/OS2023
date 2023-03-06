@@ -3,7 +3,7 @@ mkdir mydir
 chmod a+rwx mydir
 echo 2023 > myfile
 mv moveme mydir
-mv copyme mydir/copied
+cp copyme mydir/copied
 cat readme
 gcc bad.c 2>> err.txt
 
