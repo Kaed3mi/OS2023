@@ -50,6 +50,9 @@ void vprintfmt(fmt_callback_t out, void *data, const char *fmt, va_list ap) {
 			width = width * 10 + (*fmt - '0');
 			fmt++;
 		}
+		if (*fmt == '.') {
+			
+		}
 		/* check for long */
 		/* Exercise 1.4: Your code here. (7/8) */
 		long_flag = 0;
@@ -83,6 +86,10 @@ void vprintfmt(fmt_callback_t out, void *data, const char *fmt, va_list ap) {
 			 * others. (hint: 'neg_flag').
 			 */
 			/* Exercise 1.4: Your code here. (8/8) */
+			if (num < 0) {
+				num = -num;
+				neg_flag = 1;
+			}
 			print_num(out, data, num, 10, neg_flag, width, ladjust, padc, 0);
 			break;
 
