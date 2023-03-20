@@ -1,7 +1,6 @@
 #include <types.h>
 #include "print.h"
 
-char res[1000];
 
 void *memcpy(void *dst, const void *src, size_t n) {
 	void *dstaddr = dst;
@@ -100,23 +99,20 @@ int strcmp(const char *p, const char *q) {
 }
 
 void outputs(void *data, const char *buf, size_t len) {
-	for (int i = 0; i < len; i++) {
-		printchars(buf[i]);
+	char * str = (char *) data;
+	int l = strlen(str);
+	for (int i = l; i < len + l; i++) {
+		str[i] = buf[i-l];
 	}
+	str[l+len] = '\0';
 }
 
-void printchars(char ch){
-	int l = strlen(res);
-	res[l] = ch;
-	res[l+1] = '\0';
-}
 
 int sprintf(char *buf, const char *fmt, ...){
-	memset(res, 0, 1000);
+	*buf = 0;
 	va_list ap;
 	va_start(ap, fmt);
 	vprintfmt(outputs, buf, fmt, ap);
-	strcpy(buf, res);
 	va_end(ap);
 	return strlen(buf);
 }
