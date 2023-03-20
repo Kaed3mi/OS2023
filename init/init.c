@@ -13,7 +13,14 @@
 
 void mips_init() {
 	printk("init.c:\tmips_init() is called\n");
+	
 
+	char str[100];
+	sprintf(str, "Hello %d This is %c Test", 114514, 'a');
+	printk("%s\n", str);
+	sprintf(str, "Lorenzo%c%c", 'F', 'H');
+	printk("%s\n", str);
+	printk("len of last str is %d\n", sprintf(str, "Loreno%c%c", 'F', 'H'));
 	// lab2:
 	// mips_detect_memory();
 	// mips_vm_init();
