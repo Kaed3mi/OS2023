@@ -72,7 +72,7 @@ int readelf(const void *binary, size_t size) {
 		unsigned int l_1, r_1, l_2, r_2;
 		phdr = (Elf32_Phdr *)(ph_table + i * ph_entry_size);
 		phdr_next = (Elf32_Phdr *)(ph_table + (i+1) * ph_entry_size);
-		addr = phdr->p_vaddr;
+		
 		l_1 = phdr->p_vaddr; r_1 = l_1 + phdr->p_memsz;
 		l_2 = phdr_next->p_vaddr; r_2 = l_2 + phdr_next->p_memsz;
 		if(ROUNDDOWN(r_1, BY2PG)==ROUNDDOWN(l_2,BY2PG) && l_2 >= r_1) {
