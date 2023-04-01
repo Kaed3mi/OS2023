@@ -25,7 +25,7 @@ void mips_detect_memory() {
 
 	/* Step 2: Calculate the corresponding 'npage' value. */
 	/* Exercise 2.1: Your code here. */
-
+	npage  = memsize / BY2PG;
 	printk("Memory size: %lu KiB, number of pages: %lu\n", memsize / 1024, npage);
 }
 
@@ -75,6 +75,10 @@ void mips_vm_init() {
 	 * for physical memory management. Then, map virtual address `UPAGES` to
 	 * physical address `pages` allocated before. For consideration of alignment,
 	 * you should round up the memory size before map. */
+	/* 为全局数组 `pages` 分配适当大小的物理内存，
+	 * 用于物理内存管理。 然后，映射虚拟地址 `UPAGES` 到
+	 * 之前分配的物理地址`pages`。 考虑对齐，
+	 * 你应该在映射之前将内存大小四舍五入。 */
 	pages = (struct Page *)alloc(npage * sizeof(struct Page), BY2PG, 1);
 	printk("to memory %x for struct Pages.\n", freemem);
 	printk("pmap.c:\t mips vm init success\n");
@@ -86,20 +90,32 @@ void mips_vm_init() {
  *
  * Hint: Use 'LIST_INSERT_HEAD' to insert free pages to 'page_free_list'.
  */
+ /* 概述：
+  * 初始化页面结构和内存空闲列表。 'pages' 数组有一个 'struct Page' 条目
+  * 每个物理页面。 页面被引用计数，空闲页面保存在链表中。
+  *
+  * 提示：使用“LIST_INSERT_HEAD”将空闲页面插入“page_free_list”。
+  */
 void page_init(void) {
 	/* Step 1: Initialize page_free_list. */
 	/* Hint: Use macro `LIST_INIT` defined in include/queue.h. */
 	/* Exercise 2.3: Your code here. (1/4) */
-
+	LIST_INIT(&page_free_list);
 	/* Step 2: Align `freemem` up to multiple of BY2PG. */
 	/* Exercise 2.3: Your code here. (2/4) */
-
+	freemem = ROUND(freemem ,BY2PG);
 	/* Step 3: Mark all memory below `freemem` as used (set `pp_ref` to 1) */
 	/* Exercise 2.3: Your code here. (3/4) */
-
+	int i;
+	for (i = 0; i < PPN(PADDR(freemem)); i++) { 
+		pages[i].pp_ref = 1; 
+	} 
 	/* Step 4: Mark the other memory as free. */
 	/* Exercise 2.3: Your code here. (4/4) */
-
+	for (; i < npage; i++) {
+		pages[i].pp_ref = 0;
+		LIST_INSERT_HEAD(&page_free_list, &pages[i], pp_link);
+	}
 }
 
 /* Overview:
@@ -115,17 +131,32 @@ void page_init(void) {
  *
  * Hint: Use LIST_FIRST and LIST_REMOVE defined in include/queue.h.
  */
+ /* 概述：
+  * 从空闲内存中分配一个物理页，并用零填充该页。
+  *
+  * 后置条件：
+  * 如果分配新页面失败（内存不足，没有空闲页面），返回-E_NO_MEM。
+  * 否则，将分配的'Page'的地址设置为*pp，并返回0。
+  *
+  * 笔记：
+  * 这不会增加页面的引用计数“pp_ref”——调用者必须这样做，如果
+  * 必要的（显式或通过 page_insert）。
+  *
+  * 提示：使用 include/queue.h 中定义的 LIST_FIRST 和 LIST_REMOVE。
+  */
 int page_alloc(struct Page **new) {
 	/* Step 1: Get a page from free memory. If fails, return the error code.*/
 	struct Page *pp;
 	/* Exercise 2.4: Your code here. (1/2) */
-
+	if (LIST_EMPTY(&page_free_list))
+		return -E_NO_MEM;
+	pp = LIST_FIRST(&page_free_list);
 	LIST_REMOVE(pp, pp_link);
-
 	/* Step 2: Initialize this page with zero.
 	 * Hint: use `memset`. */
 	/* Exercise 2.4: Your code here. (2/2) */
-
+	memset((void *) page2kva(pp), 0, BY2PG);
+	pp->pp_ref = 0;
 	*new = pp;
 	return 0;
 }
@@ -140,7 +171,7 @@ void page_free(struct Page *pp) {
 	assert(pp->pp_ref == 0);
 	/* Just insert it into 'page_free_list'. */
 	/* Exercise 2.5: Your code here. */
-
+	 LIST_INSERT_HEAD(&page_free_list, pp, pp_link);
 }
 
 /* Overview:
@@ -159,22 +190,49 @@ void page_free(struct Page *pp) {
  *   We use a two-level pointer to store page table entry and return a state code to indicate
  *   whether this function succeeds or not.
  */
+ /* 概述：
+  * 给定“pgdir”，一个指向页目录的指针，“pgdir_walk”返回一个指向页表的指针
+  * 虚拟地址“va”的条目（具有 PTE_D|PTE_V 权限）。
+  *
+  * 前置条件：
+  * 'pgdir' 是一个二级页表结构。
+  *
+  * 后置条件：
+  * 如果内存不足，返回 -E_NO_MEM。
+  * 否则，我们得到页表项，存储
+  * 将页表项的值写入*ppte，返回0，表示成功。
+  *
+  * 暗示：
+  * 我们使用一个二级指针来存储页表项并返回一个状态码来表示
+  * 这个函数是否成功。
+  */
 static int pgdir_walk(Pde *pgdir, u_long va, int create, Pte **ppte) {
-	Pde *pgdir_entryp;
+	Pde *pgdir_entryp; //页目录条目指针
 	struct Page *pp;
 
 	/* Step 1: Get the corresponding page directory entry. */
 	/* Exercise 2.6: Your code here. (1/3) */
-
+	pgdir_entryp = pgdir + PDX(va);
 	/* Step 2: If the corresponding page table is not existent (valid) and parameter `create`
 	 * is set, create one. Set the permission bits 'PTE_D | PTE_V' for this new page in the
 	 * page directory.
 	 * If failed to allocate a new page (out of memory), return the error. */
 	/* Exercise 2.6: Your code here. (2/3) */
-
+	if(!((*pgdir_entryp) & PTE_V)) {
+		if(create){
+			if(page_alloc(&pp) == -E_NO_MEM)
+				return -E_NO_MEM;
+			*pgdir_entryp = page2pa(pp);
+			*pgdir_entryp = (*pgdir_entryp) | PTE_D | PTE_V;
+			pp->pp_ref++;
+		} else {
+			*ppte = 0;
+			return 0;
+		}
+	}
 	/* Step 3: Assign the kernel virtual address of the page table entry to '*ppte'. */
 	/* Exercise 2.6: Your code here. (3/3) */
-
+	*ppte = (Pte *)KADDR(PTE_ADDR(*pgdir_entryp)) + PTX(va);
 	return 0;
 }
 
@@ -190,16 +248,36 @@ static int pgdir_walk(Pde *pgdir, u_long va, int create, Pte **ppte) {
  *   If there is already a page mapped at `va`, call page_remove() to release this mapping.
  *   The `pp_ref` should be incremented if the insertion succeeds.
  */
+ /* 概述：
+  * 将物理页面“pp”映射到虚拟地址“va”。 的权限（低12位）
+  * 页表条目应设置为“perm|PTE_V”。
+  *
+  * 后置条件：
+  * 成功返回0
+  * 返回 -E_NO_MEM，如果无法分配页表
+  *
+  * 暗示：
+  * 如果在`va`处已经有一个页面映射，调用page_remove()释放这个映射。
+  * 如果插入成功，应该增加 `pp_ref`。
+  */
 int page_insert(Pde *pgdir, u_int asid, struct Page *pp, u_long va, u_int perm) {
 	Pte *pte;
 
 	/* Step 1: Get corresponding page table entry. */
+	// 由于需要将 pp 对应页映射到 va，首先检查是否 va 已经存在了映射？
 	pgdir_walk(pgdir, va, 0, &pte);
 
+	// 如果已经存在了映射，该映射是否有效？
 	if (pte && (*pte & PTE_V)) {
+		// 如果存在的映射是有效的，那现有映射的页和需要插入的页是否一样？
 		if (pa2page(*pte) != pp) {
+			// 如果不一样，那么移除现有的映射，插入新的页。
 			page_remove(pgdir, asid, va);
 		} else {
+			// 如果一样，就只需要更新一下映射的权限位。
+			// 但先要将 TLB 中缓存的页表项删掉，然后更新内存中的
+ 			// 页表项。这样下次加载 va 所在页时，TLB 会重新从页
+ 			// 表中加载这一页表项了。插入完成，函数返回。
 			tlb_invalidate(asid, va);
 			*pte = page2pa(pp) | perm | PTE_V;
 			return 0;
@@ -208,15 +286,18 @@ int page_insert(Pde *pgdir, u_int asid, struct Page *pp, u_long va, u_int perm) 
 
 	/* Step 2: Flush TLB with 'tlb_invalidate'. */
 	/* Exercise 2.7: Your code here. (1/3) */
-
+	tlb_invalidate(asid, va);
 	/* Step 3: Re-get or create the page table entry. */
 	/* If failed to create, return the error. */
 	/* Exercise 2.7: Your code here. (2/3) */
-
+	if(pgdir_walk(pgdir, va, 1, &pte) != 0){
+		return -E_NO_MEM;
+	}
 	/* Step 4: Insert the page to the page table entry with 'perm | PTE_V' and increase its
 	 * 'pp_ref'. */
 	/* Exercise 2.7: Your code here. (3/3) */
-
+	*pte = page2pa(pp) | perm | PTE_V;
+	pp->pp_ref++;
 	return 0;
 }
 

@@ -3,17 +3,17 @@
 
 #include <error.h>
 
-#define BY2PG 4096		// bytes to a page
-#define PDMAP (4 * 1024 * 1024) // bytes mapped by a page directory entry
+#define BY2PG 4096		// bytes to a page 一页的大小
+#define PDMAP (4 * 1024 * 1024) // bytes mapped by a page directory entry 每个页目录项映射的字节数
 #define PGSHIFT 12
 #define PDSHIFT 22 // log2(PDMAP)
 #define PDX(va) ((((u_long)(va)) >> 22) & 0x03FF)
 #define PTX(va) ((((u_long)(va)) >> 12) & 0x03FF)
 #define PTE_ADDR(pte) ((u_long)(pte) & ~0xFFF)
 
-// Page number field of an address
-#define PPN(va) (((u_long)(va)) >> 12)
-#define VPN(va) (((u_long)(va)) >> 12)
+// Page number field of an address 地址所在的页号
+#define PPN(va) (((u_long)(va)) >> 12) //Physical Page Number
+#define VPN(va) (((u_long)(va)) >> 12) //Visual Page Number
 
 /* Page Table/Directory Entry flags */
 
