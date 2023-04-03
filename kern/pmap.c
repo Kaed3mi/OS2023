@@ -9,7 +9,6 @@ static u_long memsize; /* Maximum physical address */
 u_long npage;	       /* Amount of memory(in pages) */
 
 Pde *cur_pgdir;
-
 struct Page *pages;
 static u_long freemem;
 
@@ -25,7 +24,7 @@ void mips_detect_memory() {
 
 	/* Step 2: Calculate the corresponding 'npage' value. */
 	/* Exercise 2.1: Your code here. */
-	npage  = memsize / BY2PG;
+	npage = memsize / BY2PG;
 	printk("Memory size: %lu KiB, number of pages: %lu\n", memsize / 1024, npage);
 }
 
@@ -36,6 +35,7 @@ void mips_detect_memory() {
    Post-Condition:
     If we're out of memory, should panic, else return this address of memory we have allocated.*/
 void *alloc(u_int n, u_int align, int clear) {
+	// 该地址表示程序的结束位置。这是一个常用的内存分配技巧，即将操作系统内存的起始地址设置为程序代码和数据的末尾，以便有效地利用空间。
 	extern char end[];
 	u_long alloced_mem;
 
@@ -207,7 +207,7 @@ void page_free(struct Page *pp) {
   * 这个函数是否成功。
   */
 static int pgdir_walk(Pde *pgdir, u_long va, int create, Pte **ppte) {
-	Pde *pgdir_entryp; //页目录条目指针
+	Pde *pgdir_entryp; //页目录条目指针   页目项里的值
 	struct Page *pp;
 
 	/* Step 1: Get the corresponding page directory entry. */
@@ -232,6 +232,19 @@ static int pgdir_walk(Pde *pgdir, u_long va, int create, Pte **ppte) {
 	}
 	/* Step 3: Assign the kernel virtual address of the page table entry to '*ppte'. */
 	/* Exercise 2.6: Your code here. (3/3) */
+
+	/*
+	printk("va = %x\n", va);
+	printk("pgdir = %x\n", pgdir);
+	printk("pgdir_entryp = %x\n", pgdir_entryp);
+	printk("*pgdir_entryp = %x\n", *pgdir_entryp);
+	printk("PTE_ADDR(*pgdir_entryp) = %x\n", PTE_ADDR(*pgdir_entryp));
+	printk("KADDR(PTE_ADDR(*pgdir_entryp)) = %x\n", KADDR(PTE_ADDR(*pgdir_entryp)));
+	printk("(Pte *)KADDR(PTE_ADDR(*pgdir_entryp)) + PTX(va) = %x\n", (Pte *)KADDR(PTE_ADDR(*pgdir_entryp)) + PTX(va));
+	PTE_ADDR(**ppte) + OFFSET(va); 物理地址
+	pgdir + PDX(va)
+	*/
+
 	*ppte = (Pte *)KADDR(PTE_ADDR(*pgdir_entryp)) + PTX(va);
 	return 0;
 }
@@ -565,4 +578,28 @@ void page_check(void) {
 	page_free(pp2);
 
 	printk("page_check() succeeded!\n");
+}
+
+u_int page_perm_stat(Pde *pgdir, struct Page *pp, u_int perm_mask) {
+	u_int ret = 0;
+	Pde *pgdir_entryp;
+	Pte *pte;
+	//printk("here\n");
+	for(int i = 0; i < 1024; i++) {
+		pgdir_entryp = pgdir + i;
+		//printk("hello\n");
+		if((*pgdir_entryp) & PTE_V){
+			//printk("koko\n");		
+			for(int j = 0; j < 1024; j++) {
+				pte = (Pte *)KADDR(PTE_ADDR(*pgdir_entryp)) + j;
+				if(PTE_ADDR(*pte) == PTE_ADDR(page2pa(pp)))
+					if(*pte & PTE_V)
+						if(((*pte) & perm_mask) == perm_mask)
+							ret++;
+			}
+		}
+	}
+	
+	//printk("ret = %d\n", ret);
+	return ret;
 }

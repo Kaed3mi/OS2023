@@ -9,7 +9,7 @@
 #define PDSHIFT 22 // log2(PDMAP)
 #define PDX(va) ((((u_long)(va)) >> 22) & 0x03FF)
 #define PTX(va) ((((u_long)(va)) >> 12) & 0x03FF)
-#define PTE_ADDR(pte) ((u_long)(pte) & ~0xFFF)
+#define PTE_ADDR(pte) ((u_long)(pte) & ~0xFFF) //去掉低十二位(权限位)，只保留地址相关的值
 
 // Page number field of an address 地址所在的页号
 #define PPN(va) (((u_long)(va)) >> 12) //Physical Page Number
@@ -49,13 +49,13 @@
 
 /*
  o     4G ----------->  +----------------------------+------------0x100000000
- o                      |       ...                  |  kseg2
+ o                      |       ...                  |  kseg2  
  o      KSEG2    -----> +----------------------------+------------0xc000 0000
- o                      |          Devices           |  kseg1
+ o                      |          Devices           |  kseg1  外设
  o      KSEG1    -----> +----------------------------+------------0xa000 0000
  o                      |      Invalid Memory        |   /|\
  o                      +----------------------------+----|-------Physical Memory Max
- o                      |       ...                  |  kseg0
+ o                      |       ...                  |  kseg0  内核
  o      KSTACKTOP-----> +----------------------------+----|-------0x8040 0000-------end
  o                      |       Kernel Stack         |    | KSTKSIZE            /|\
  o                      +----------------------------+----|------                |
