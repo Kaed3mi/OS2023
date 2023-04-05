@@ -18,7 +18,6 @@ void mips_init() {
 	 mips_detect_memory();
 	 mips_vm_init();
 	 page_init();
-
 	// lab3:
 	// env_init();
 
@@ -42,6 +41,7 @@ void mips_init() {
 	// lab3:
 	// kclock_init();
 	// enable_irq();
+	halt();
 	while (1) {
 	}
 }

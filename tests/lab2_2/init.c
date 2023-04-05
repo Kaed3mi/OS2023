@@ -10,6 +10,7 @@ void page_strong_check(void) {
 	assert(page_alloc(&pp2) == 0);
 	assert(page_alloc(&pp3) == 0);
 	assert(page_alloc(&pp4) == 0);
+	printk("DEBUG-----:%d %d %d %d %d\n", page2ppn(pp0), page2ppn(pp1), page2ppn(pp2), page2ppn(pp3), page2ppn(pp4));
 
 	assert(pp0);
 	assert(pp1 && pp1 != pp0);

@@ -44,7 +44,6 @@ void *alloc(u_int n, u_int align, int clear) {
 	if (freemem == 0) {
 		freemem = (u_long)end; // end
 	}
-
 	/* Step 1: Round up `freemem` up to be aligned properly */
 	freemem = ROUND(freemem, align);
 
@@ -56,7 +55,6 @@ void *alloc(u_int n, u_int align, int clear) {
 
 	// Panic if we're out of memory.
 	panic_on(PADDR(freemem) >= memsize);
-
 	/* Step 4: Clear allocated chunk if parameter `clear` is set. */
 	if (clear) {
 		memset((void *)alloced_mem, 0, n);
@@ -75,10 +73,6 @@ void mips_vm_init() {
 	 * for physical memory management. Then, map virtual address `UPAGES` to
 	 * physical address `pages` allocated before. For consideration of alignment,
 	 * you should round up the memory size before map. */
-	/* 为全局数组 `pages` 分配适当大小的物理内存，
-	 * 用于物理内存管理。 然后，映射虚拟地址 `UPAGES` 到
-	 * 之前分配的物理地址`pages`。 考虑对齐，
-	 * 你应该在映射之前将内存大小四舍五入。 */
 	pages = (struct Page *)alloc(npage * sizeof(struct Page), BY2PG, 1);
 	printk("to memory %x for struct Pages.\n", freemem);
 	printk("pmap.c:\t mips vm init success\n");
@@ -90,12 +84,6 @@ void mips_vm_init() {
  *
  * Hint: Use 'LIST_INSERT_HEAD' to insert free pages to 'page_free_list'.
  */
- /* 概述：
-  * 初始化页面结构和内存空闲列表。 'pages' 数组有一个 'struct Page' 条目
-  * 每个物理页面。 页面被引用计数，空闲页面保存在链表中。
-  *
-  * 提示：使用“LIST_INSERT_HEAD”将空闲页面插入“page_free_list”。
-  */
 void page_init(void) {
 	/* Step 1: Initialize page_free_list. */
 	/* Hint: Use macro `LIST_INIT` defined in include/queue.h. */
@@ -108,6 +96,11 @@ void page_init(void) {
 	/* Exercise 2.3: Your code here. (3/4) */
 	int i;
 	for (i = 0; i < PPN(PADDR(freemem)); i++) { 
+		/* 注释:
+		 * printk("Debug-----:pages[%d] = %x\n", i, pages[i]);
+		 * page[i]都为0，因为在alloc中memset了0，实际上由于我们通过宏来获得page的
+		 * 物理页号，所以不需要pages[i]存任何值
+		 */
 		pages[i].pp_ref = 1; 
 	} 
 	/* Step 4: Mark the other memory as free. */
@@ -131,19 +124,6 @@ void page_init(void) {
  *
  * Hint: Use LIST_FIRST and LIST_REMOVE defined in include/queue.h.
  */
- /* 概述：
-  * 从空闲内存中分配一个物理页，并用零填充该页。
-  *
-  * 后置条件：
-  * 如果分配新页面失败（内存不足，没有空闲页面），返回-E_NO_MEM。
-  * 否则，将分配的'Page'的地址设置为*pp，并返回0。
-  *
-  * 笔记：
-  * 这不会增加页面的引用计数“pp_ref”——调用者必须这样做，如果
-  * 必要的（显式或通过 page_insert）。
-  *
-  * 提示：使用 include/queue.h 中定义的 LIST_FIRST 和 LIST_REMOVE。
-  */
 int page_alloc(struct Page **new) {
 	/* Step 1: Get a page from free memory. If fails, return the error code.*/
 	struct Page *pp;
@@ -190,22 +170,6 @@ void page_free(struct Page *pp) {
  *   We use a two-level pointer to store page table entry and return a state code to indicate
  *   whether this function succeeds or not.
  */
- /* 概述：
-  * 给定“pgdir”，一个指向页目录的指针，“pgdir_walk”返回一个指向页表的指针
-  * 虚拟地址“va”的条目（具有 PTE_D|PTE_V 权限）。
-  *
-  * 前置条件：
-  * 'pgdir' 是一个二级页表结构。
-  *
-  * 后置条件：
-  * 如果内存不足，返回 -E_NO_MEM。
-  * 否则，我们得到页表项，存储
-  * 将页表项的值写入*ppte，返回0，表示成功。
-  *
-  * 暗示：
-  * 我们使用一个二级指针来存储页表项并返回一个状态码来表示
-  * 这个函数是否成功。
-  */
 static int pgdir_walk(Pde *pgdir, u_long va, int create, Pte **ppte) {
 	Pde *pgdir_entryp; //页目录条目指针
 	struct Page *pp;
@@ -248,18 +212,6 @@ static int pgdir_walk(Pde *pgdir, u_long va, int create, Pte **ppte) {
  *   If there is already a page mapped at `va`, call page_remove() to release this mapping.
  *   The `pp_ref` should be incremented if the insertion succeeds.
  */
- /* 概述：
-  * 将物理页面“pp”映射到虚拟地址“va”。 的权限（低12位）
-  * 页表条目应设置为“perm|PTE_V”。
-  *
-  * 后置条件：
-  * 成功返回0
-  * 返回 -E_NO_MEM，如果无法分配页表
-  *
-  * 暗示：
-  * 如果在`va`处已经有一个页面映射，调用page_remove()释放这个映射。
-  * 如果插入成功，应该增加 `pp_ref`。
-  */
 int page_insert(Pde *pgdir, u_int asid, struct Page *pp, u_long va, u_int perm) {
 	Pte *pte;
 
