@@ -35,5 +35,22 @@ void schedule(int yield) {
 	 *   'TAILQ_FIRST', 'TAILQ_REMOVE', 'TAILQ_INSERT_TAIL'
 	 */
 	/* Exercise 3.12: Your code here. */
+	count--;
+	if(yield != 0 || count == 0 || e == NULL || e->env_status != ENV_RUNNABLE) {
+		if(e != NULL && e->env_status == ENV_RUNNABLE) {
+			// Move the current env to the end of the list
+			TAILQ_REMOVE(&env_sched_list, e, env_sched_link);
+			TAILQ_INSERT_TAIL(&env_sched_list, e, env_sched_link);
+		}
 
+		// Select a new env to run
+		
+		if(TAILQ_EMPTY(&env_sched_list))
+			panic("No runnable environments in env_sched_list");
+		else e = TAILQ_FIRST(&env_sched_list);
+		// Reset the time slice count
+		count = e->env_pri;
+	}
+
+	env_run(e);
 }

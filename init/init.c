@@ -19,7 +19,7 @@ void mips_init() {
 	 mips_vm_init();
 	 page_init();
 	// lab3:
-	// env_init();
+	 env_init();
 
 	// lab3:
 	// ENV_CREATE_PRIORITY(user_bare_loop, 1);
