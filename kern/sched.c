@@ -44,10 +44,9 @@ void schedule(int yield) {
 		}
 
 		// Select a new env to run
-		
 		if(TAILQ_EMPTY(&env_sched_list))
-			panic("No runnable environments in env_sched_list");
-		else e = TAILQ_FIRST(&env_sched_list);
+			panic("schedule: no runnable envs");
+		e = TAILQ_FIRST(&env_sched_list);
 		// Reset the time slice count
 		count = e->env_pri;
 	}
