@@ -31,17 +31,11 @@ void do_reserved(struct Trapframe *tf) {
 }
 
 void do_ov(struct Trapframe *tf) {
-	//print_tf(tf);
 	u_long va = tf->cp0_epc;
 	Pte *pte;
-	//printk("1\n");
 	struct Page *pp = page_lookup(curenv->env_pgdir, va, &pte);
-	//printk("2\n");
 	u_long *kva = (u_long *)((KADDR(page2pa(pp))) | (va & 0xfff));
-	//kva = KADDR(*pte | (va & 0x0fff));
-	//printk("3\n");
 	u_long add = 0x00000020, sub = 0x00000022, addi = 0x20000000;
-	//printk("*kva = %x\n", *kva);
 	if((*kva & 0xfc0007ff) == add){
 		*kva = *kva | 0x1;
 		printk("add ov handled\n");
@@ -49,8 +43,8 @@ void do_ov(struct Trapframe *tf) {
 		*kva = *kva | 0x1;
 		printk("sub ov handled\n");
 	} else if((*kva & 0xfc000000) == addi){
-		u_long t_reg = *kva & 0x001f0000;
-		u_long s_reg = *kva & 0x03e00000;
+		u_long t_reg = (*kva & 0x001f0000) >> 16;
+		u_long s_reg = (*kva & 0x03e00000) >> 21;
 		u_long imm   = *kva & 0x0000ffff;
 		tf->regs[t_reg] = tf->regs[s_reg]/2 + imm/2;
 		tf->cp0_epc += 4;
