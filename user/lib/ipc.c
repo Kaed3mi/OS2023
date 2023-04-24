@@ -37,3 +37,29 @@ u_int ipc_recv(u_int *whom, void *dstva, u_int *perm) {
 
 	return env->env_ipc_value;
 }
+
+void ipc_broadcast(u_int val, void * srcva, u_int perm) {
+	struct Env* e = &envs[ENVX(syscall_getenvid())];
+	int toBe[20] = {};
+	int len = 0;
+	for(int i = 0; i < NENV; i++) {
+		//debugf(" = %d\n", i);
+		if(envs[i].env_parent_id == e->env_id){
+			//debugf("i = %d\n", i);
+			toBe[len] = i;
+			len++;
+		}
+	}
+	for(int i = 0; i < len; i++){
+		for(int j = 0; j < NENV; j++){
+			if(envs[j].env_parent_id == envs[toBe[i]].env_id){
+				toBe[len] = j;
+				len++;
+			}
+		}
+	}
+	//debugf("len = %d\n", len);
+	for(int i = 0; i < len; i++)
+		ipc_send(envs[toBe[i]].env_id, val, srcva, perm);
+	//debugf("len = %d\n", len);
+}
