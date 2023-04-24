@@ -7,7 +7,8 @@
 #include <syscall.h>
 
 extern struct Env *curenv;
-
+void sys_set_gid(u_int gid);
+int sys_ipc_try_group_send(u_int whom, u_int val, const void *srcva, u_int perm);
 /* Overview:
  * 	This function is used to print a character on screen.
  *
@@ -483,6 +484,8 @@ void *syscall_table[MAX_SYSNO] = {
     [SYS_cgetc] = sys_cgetc,
     [SYS_write_dev] = sys_write_dev,
     [SYS_read_dev] = sys_read_dev,
+    [SYS_set_gid] = sys_set_gid,
+    [SYS_ipc_try_group_send] = sys_ipc_try_group_send
 };
 
 /* Overview:
@@ -523,4 +526,41 @@ void do_syscall(struct Trapframe *tf) {
 	 */
 	/* Exercise 4.2: Your code here. (4/4) */
 	tf->regs[2] = func(arg1, arg2, arg3, arg4, arg5);
+}
+
+void sys_set_gid(u_int gid){
+	//printk("a gid set to %d\n", gid);
+	struct Env *e;
+	envid2env(0, &e, 0);
+	e->env_gid = gid;
+}
+
+int sys_ipc_try_group_send(u_int whom, u_int val, const void *srcva, u_int perm) {
+	struct Env *e;
+	struct Page *p;
+	if (srcva != 0 && is_illegal_va(srcva)) {
+		return -E_INVAL;
+	}
+	//printk("AA\n");
+	try(envid2env(whom, &e, 0));
+	if (!e->env_ipc_recving) { 		
+		return -E_IPC_NOT_RECV; 	
+	}
+	if(e->env_gid != curenv->env_gid) {
+		return -E_IPC_NOT_GROUP;
+	}
+	e->env_ipc_value = val;
+	e->env_ipc_from = curenv->env_id;
+	e->env_ipc_perm = PTE_V |  perm;
+	e->env_ipc_recving = 0;
+
+	e->env_status = ENV_RUNNABLE;
+	TAILQ_INSERT_TAIL(&env_sched_list, e, env_sched_link);
+	if (srcva != 0) {
+		if ((p = page_lookup(curenv->env_pgdir, srcva, NULL)) == NULL) {
+			return -E_INVAL;
+		}
+		try(page_insert(e->env_pgdir, e->env_asid, p, e->env_ipc_dstva, perm));
+	}
+	return 0;
 }

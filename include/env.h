@@ -19,6 +19,7 @@ struct Env {
 	struct Trapframe env_tf;  // Saved registers
 	LIST_ENTRY(Env) env_link; // Free list
 	u_int env_id;		  // Unique environment identifier
+	u_int env_gid; //Group id
 	u_int env_asid;		  // ASID
 	u_int env_parent_id;	  // env_id of this env's parent
 	u_int env_status;	  // Status of the environment
