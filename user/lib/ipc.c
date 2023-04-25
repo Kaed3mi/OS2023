@@ -43,9 +43,7 @@ void ipc_broadcast(u_int val, void * srcva, u_int perm) {
 	int toBe[20] = {};
 	int len = 0;
 	for(int i = 0; i < NENV; i++) {
-		//debugf(" = %d\n", i);
 		if(envs[i].env_parent_id == e->env_id){
-			//debugf("i = %d\n", i);
 			toBe[len] = i;
 			len++;
 		}
@@ -58,8 +56,7 @@ void ipc_broadcast(u_int val, void * srcva, u_int perm) {
 			}
 		}
 	}
-	//debugf("len = %d\n", len);
-	for(int i = 0; i < len; i++)
+	for(int i = 0; i < len; i++) {
 		ipc_send(envs[toBe[i]].env_id, val, srcva, perm);
-	//debugf("len = %d\n", len);
+	}
 }
