@@ -57,7 +57,7 @@ int sys_sem(int op, int sem_id, const char *name){
 		if(sems[sem_id].checkperm != 0) {
 			if(isMySon(sems[sem_id].env_id,
 				curenv->env_id) == 0)
-				return -E_NO_SEM;
+				//return -E_NO_SEM;
 		}
 	}
 	if(op == 1) {
