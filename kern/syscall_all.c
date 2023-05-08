@@ -78,7 +78,6 @@ int sys_sem(int op, int sem_id, const char *name){
 		for(int i = 0; i < w_len; i++)
 			if(ws[i].e != NULL && ws[i].sem_id == sem_id){
 				ws[i].e = NULL;
-				ws[i].sem_id = -1;
 				ws[i].e->env_status = ENV_RUNNABLE;
 				TAILQ_INSERT_TAIL(&env_sched_list, 
 					ws[i].e, env_sched_link);
