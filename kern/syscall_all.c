@@ -6,6 +6,29 @@
 #include <sched.h>
 #include <syscall.h>
 
+int barrier = 0;
+struct Env *waitings[100];
+int len = 0;
+void sys_barrier(int n) {
+	barrier += n;
+	printk("barrier = %d\n", barrier);
+	if (barrier == 0) {
+		for (int i = 0; i < len; i++) {
+			waitings[i]->env_status = ENV_RUNNABLE;
+			TAILQ_INSERT_TAIL(&env_sched_list, 
+			waitings[i], env_sched_link);
+		}
+	} else if (barrier > 0 && n == -1){
+		printk("i am waiting, id = %x\n",
+		curenv->env_id);
+		waitings[len++] = curenv;
+		curenv->env_status = ENV_NOT_RUNNABLE;
+		TAILQ_REMOVE(&env_sched_list, curenv,
+		 env_sched_link);
+		schedule(1);
+	}
+}
+
 extern struct Env *curenv;
 
 /* Overview:
@@ -491,6 +514,7 @@ void *syscall_table[MAX_SYSNO] = {
     [SYS_ipc_recv] = sys_ipc_recv,
     [SYS_cgetc] = sys_cgetc,
     [SYS_write_dev] = sys_write_dev,
+    [SYS_barrier] = sys_barrier,
     [SYS_read_dev] = sys_read_dev,
 };
 

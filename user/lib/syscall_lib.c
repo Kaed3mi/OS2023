@@ -4,6 +4,10 @@
 #include <syscall.h>
 #include <trap.h>
 
+void syscall_barrier(int n) {
+	msyscall(SYS_barrier, n);
+}
+
 void syscall_putchar(int ch) {
 	msyscall(SYS_putchar, ch);
 }

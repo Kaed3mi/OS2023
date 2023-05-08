@@ -8,7 +8,7 @@ int main() {
 			debugf("I'm son!\n");
 			barrier_wait();
 			syscall_panic("Wrong block!");
-		}
+		} else debugf("I'm father!\n");
 	}
 	debugf("I'm finished!\n");
 	return 0;
