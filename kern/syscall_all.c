@@ -73,7 +73,6 @@ int sys_sem(int op, int sem_id, const char *name){
 		return 0;
 	}
 	else if(op == 2) {
-		if(sems[sem_id].valid == 0) return -E_NO_SEM;
 		sems[sem_id].value += 1;
 		//唤醒进程
 		for(int i = 0; i < w_len; i++)
@@ -83,6 +82,7 @@ int sys_sem(int op, int sem_id, const char *name){
 				ws[i].e->env_status = ENV_RUNNABLE;
 				TAILQ_INSERT_TAIL(&env_sched_list, 
 					ws[i].e, env_sched_link);
+				return 0;
 			}
 			return 0;
 	}
