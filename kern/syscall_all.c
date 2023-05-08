@@ -22,7 +22,7 @@ struct Waiting{
 	struct Env *e;
 	int sem_id;
 };
-struct Waiting ws[50] = {};
+struct Waiting ws[1000] = {};
 int w_len = 0;
 
 int sys_sem_init(const char *name, int init_value, int checkperm) {
