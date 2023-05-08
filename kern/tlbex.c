@@ -62,18 +62,21 @@ Pte _do_tlb_refill(u_long va, u_int asid) {
  */
 void do_tlb_mod(struct Trapframe *tf) {
 	struct Trapframe tmp_tf = *tf;
-
+	//设置异常处理栈地址。
 	if (tf->regs[29] < USTACKTOP || tf->regs[29] >= UXSTACKTOP) {
 		tf->regs[29] = UXSTACKTOP;
 	}
+	//将当前现场保存到异常处理栈当中。
 	tf->regs[29] -= sizeof(struct Trapframe);
 	*(struct Trapframe *)tf->regs[29] = tmp_tf;
 
 	if (curenv->env_user_tlb_mod_entry) {
+		//设置a0的值，也就是cow_entry的参数*tf。
 		tf->regs[4] = tf->regs[29];
 		tf->regs[29] -= sizeof(tf->regs[4]);
 		// Hint: Set 'cp0_epc' in the context 'tf' to 'curenv->env_user_tlb_mod_entry'.
 		/* Exercise 4.11: Your code here. */
+		//使得改函数返回后，跳转到用户异常处理函数，该函数在课下实现当中为cow_entry。
 		tf->cp0_epc = curenv->env_user_tlb_mod_entry;
 	} else {
 		panic("TLB Mod but no user handler registered");
