@@ -9,7 +9,7 @@
 extern struct Env *curenv;
 
 struct Sem {
-	const char *name;
+	char name[64];
 	int valid;
 	int value;
 	int checkperm;
@@ -28,7 +28,7 @@ int w_len = 0;
 int sys_sem_init(const char *name, int init_value, int checkperm) {
 	//printk("init starts\n");
 	sems[len].valid = 1;
-	sems[len].name = name;
+	strcpy(sems[len].name, name);
 	sems[len].value = init_value;
 	sems[len].checkperm = checkperm;
 	sems[len].env_id = curenv->env_id;
@@ -50,11 +50,11 @@ int isMySon(int fa, int so) {
 int sys_sem(int op, int sem_id, const char *name){
 	if(op == 1 || op == 2 || op == 3){
 		if(sem_id >= 0 && sem_id <20) {
-			if(sems[sem_id].valid ==0) return -E_NO_SEM;
+			if(sems[sem_id].valid == 0) return -E_NO_SEM;
 		} else return -E_NO_SEM;
 		if(sems[sem_id].checkperm != 0) {
-			if(!isMySon(sems[sem_id].env_id,
-				curenv->env_id))
+			if(isMySon(sems[sem_id].env_id,
+				curenv->env_id) == 0)
 				return -E_NO_SEM;
 		}
 	}
