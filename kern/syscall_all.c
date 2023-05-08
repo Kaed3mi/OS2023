@@ -26,6 +26,8 @@ struct Waiting ws[1000] = {};
 int w_len = 0;
 
 int sys_sem_init(const char *name, int init_value, int checkperm) {
+	if(len == 10)
+		return -E_NO_SEM;
 	//printk("init starts\n");
 	sems[len].valid = 1;
 	strcpy(sems[len].name, name);
