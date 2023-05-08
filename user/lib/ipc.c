@@ -4,6 +4,25 @@
 #include <lib.h>
 #include <mmu.h>
 
+int sem_init(const char *name, int init_value, int checkperm){
+	syscall_sem_init(name, init_value, checkperm);
+}
+
+int sem_wait(int sem_id) {
+	syscall_sem(1, sem_id, NULL);
+}
+
+int sem_post(int sem_id) {
+	syscall_sem(2, sem_id, NULL);
+}
+
+int sem_getvalue(int sem_id) {
+	syscall_sem(3, sem_id, NULL);
+}
+
+int sem_getid(const char *name) {
+	syscall_sem(4, 0, name);
+}
 // Send val to whom.  This function keeps trying until
 // it succeeds.  It should panic() on any error other than
 // -E_IPC_NOT_RECV.

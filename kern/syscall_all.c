@@ -8,6 +8,82 @@
 
 extern struct Env *curenv;
 
+struct Sem {
+	const char *name;
+	int valid;
+	int value;
+	int checkperm;
+};
+struct Sem sems[20] = {};
+int len = 0;
+
+struct Waiting{
+	struct Env *e;
+	int sem_id;
+};
+struct Waiting ws[50] = {};
+int w_len = 0;
+int sys_sem_init(const char *name, int init_value, int checkperm) {
+	//printk("init starts\n");
+	sems[len].valid = 1;
+	sems[len].name = name;
+	sems[len].value = init_value;
+	sems[len].checkperm = checkperm;
+	len++;
+	//printk("init ok, id = %d\n", len-1);
+	return len-1;
+}
+
+int sys_sem(int op, int sem_id, const char *name){
+	if(op == 1) {
+		if(sem_id >=0 && sem_id < 20) {
+			if(sems[sem_id].valid == 0) return -E_NO_SEM;
+			if(sems[sem_id].value == 0){
+				ws[w_len].e = curenv;
+				ws[w_len++].sem_id = sem_id;
+				curenv->env_status = ENV_NOT_RUNNABLE;
+				TAILQ_REMOVE(&env_sched_list, curenv,
+					 env_sched_link);
+				schedule(1);
+			}
+			sems[sem_id].value -= 1;
+			return 0;
+		}
+		return -E_NO_SEM;
+	}
+	else if(op == 2) {
+		if(sem_id >=0 && sem_id < 20) {
+			if(sems[sem_id].valid == 0) return -E_NO_SEM;
+			sems[sem_id].value += 1;
+			//唤醒进程
+			for(int i = 0; i < w_len; i++)
+				if(ws[i].e != NULL && ws[i].sem_id == sem_id){
+					ws[i].e->env_status = ENV_RUNNABLE;
+					TAILQ_INSERT_TAIL(&env_sched_list, 
+						ws[i].e, env_sched_link);
+				}
+			return 0;
+		}
+		return -E_NO_SEM;
+	}
+	else if(op == 3) {
+		if(sem_id >=0 && sem_id < 20) {
+			if(sems[sem_id].valid == 0) return -E_NO_SEM;
+			return sems[sem_id].value;
+		}
+		return -E_NO_SEM;
+	}
+	else if(op == 4) {
+		for(int i = 0; i < 20; i++){
+			if(strcmp(sems[i].name, name) == 0
+				&& sems[i].valid == 1)
+				return i;
+		}
+		return -E_NO_SEM;
+	}
+	return -E_NO_SEM;
+}
+
 /* Overview:
  * 	This function is used to print a character on screen.
  *
@@ -492,6 +568,8 @@ void *syscall_table[MAX_SYSNO] = {
     [SYS_cgetc] = sys_cgetc,
     [SYS_write_dev] = sys_write_dev,
     [SYS_read_dev] = sys_read_dev,
+    [SYS_sem_init] = sys_sem_init,
+    [SYS_sem] = sys_sem
 };
 
 /* Overview:

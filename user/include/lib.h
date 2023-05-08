@@ -13,6 +13,17 @@
 #define envs ((volatile struct Env *)UENVS)
 #define pages ((volatile struct Page *)UPAGES)
 
+int syscall_sem_init(const char *name, int init_value, int checkperm);
+int syscall_sem(int op, int sem_id, const char *name);
+
+
+int sem_init(const char *name, int init_value, int checkperm);
+int sem_wait(int sem_id);
+int sem_post(int sem_id);
+int sem_getvalue(int sem_id);
+int sem_getid(const char *name);
+
+
 // libos
 void exit(void) __attribute__((noreturn));
 
