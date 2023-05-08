@@ -37,14 +37,24 @@ int sys_sem_init(const char *name, int init_value, int checkperm) {
 	return len-1;
 }
 
+int isMySon(int fa, int so) {
+	struct Env *e;
+	envid2env(so, &e, 0);
+	if(e->env_parent_id == fa)
+		return 1;
+	if(e->env_parent_id == 0)
+		return 0;
+	else return isMySon(fa, e->env_parent_id);
+}
+
 int sys_sem(int op, int sem_id, const char *name){
 	if(op == 1 || op == 2 || op == 3){
 		if(sem_id >= 0 && sem_id <20) {
 			if(sems[sem_id].valid ==0) return -E_NO_SEM;
 		} else return -E_NO_SEM;
 		if(sems[sem_id].checkperm != 0) {
-			if(curenv->env_parent_id != 
-				sems[sem_id].env_id)
+			if(!isMySon(sems[sem_id].env_id,
+				curenv->env_id))
 				return -E_NO_SEM;
 		}
 	}
