@@ -21,8 +21,8 @@ void usleep(u_int us) {
 	u_int entry_time = get_time(&temp);
 	while (1) {
 		u_int now_time = get_time(&temp);
-		debugf("us = %d, s = %d\n", us, us * 0.000001);
-		if(now_time >= entry_time + us * 0.000001) {
+		//debugf("us = %d, s = %d\n", us, us * 0.000001);
+		if(now_time >= entry_time + (us / 1000000)) {
 			return;
 		} else {
 			syscall_yield();
