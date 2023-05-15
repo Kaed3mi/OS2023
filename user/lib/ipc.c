@@ -18,10 +18,13 @@ u_int get_time(u_int *us) {
 
 void usleep(u_int us) {
 	u_int temp;
-	u_int entry_time = get_time(&temp) % 100;
+	int entry_time = (int) get_time(&temp) % 100;
+	int entry_us = (int) temp;
 	while (1) {
-		u_int now_time = get_time(&temp) % 100;
-		if((now_time*1000000) >= (entry_time*1000000) + us) {
+		int now_time = (int) get_time(&temp) % 100;
+		int now_us = (int) temp;
+		if((now_time*1000000) + now_us 
+			>= (entry_time*1000000) + entry_us + us) {
 			return;
 		} else {
 			syscall_yield();
