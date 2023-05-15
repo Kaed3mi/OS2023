@@ -18,10 +18,9 @@ u_int get_time(u_int *us) {
 
 void usleep(u_int us) {
 	u_int temp;
-	u_int entry_time = get_time(&temp) / 100;
+	u_int entry_time = get_time(&temp) % 100;
 	while (1) {
-		u_int now_time = get_time(&temp) / 100;
-		//debugf("us = %d, s = %d\n", us, us * 0.000001);
+		u_int now_time = get_time(&temp) % 100;
 		if((now_time*1000000) >= (entry_time*1000000) + us) {
 			return;
 		} else {
