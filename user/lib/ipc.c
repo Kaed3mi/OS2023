@@ -11,7 +11,7 @@ u_int get_time(u_int *us) {
 	u_int temp = 0;
 	syscall_write_dev(&temp, RTC_ADDR, sizeof(temp));
 	syscall_read_dev(&temp, RTC_ADDR + RTC_ALL_OFF, sizeof(temp));
-	syscall_read_dev(&us, RTC_ADDR + RTC_US_OFF, sizeof(us));
+	syscall_read_dev(us, RTC_ADDR + RTC_US_OFF, sizeof(us));
 	return temp;
 }
 
@@ -21,7 +21,8 @@ void usleep(u_int us) {
 	u_int entry_time = get_time(&temp);
 	while (1) {
 		u_int now_time = get_time(&temp);
-		if(now_time >= entry_time + us*0.001) {
+		debugf("us = %d, s = %d\n", us, us * 0.000001);
+		if(now_time >= entry_time + us * 0.000001) {
 			return;
 		} else {
 			syscall_yield();
