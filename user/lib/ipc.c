@@ -3,6 +3,32 @@
 #include <env.h>
 #include <lib.h>
 #include <mmu.h>
+#define RTC_ADDR 0x15000000
+#define RTC_ALL_OFF 0x0010
+#define RTC_US_OFF 0X0020
+
+u_int get_time(u_int *us) {
+	u_int temp = 0;
+	syscall_write_dev(&temp, RTC_ADDR, sizeof(temp));
+	syscall_read_dev(&temp, RTC_ADDR + RTC_ALL_OFF, sizeof(temp));
+	syscall_read_dev(&us, RTC_ADDR + RTC_US_OFF, sizeof(us));
+	return temp;
+}
+
+
+void usleep(u_int us) {
+	u_int temp;
+	u_int entry_time = get_time(&temp);
+	while (1) {
+		u_int now_time = get_time(&temp);
+		if(now_time >= entry_time + us*0.001) {
+			return;
+		} else {
+			syscall_yield();
+		}
+	}
+}
+
 
 // Send val to whom.  This function keeps trying until
 // it succeeds.  It should panic() on any error other than
