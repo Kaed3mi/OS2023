@@ -26,7 +26,7 @@ int main() {
 			user_panic("READ_ERROR");
 		}
 	}
-
+	debugf("OK1\n");
 	// 覆写检查1
 	int prev = 3;
 	for (int i = 1; i <= 16; i++) {
@@ -47,7 +47,7 @@ int main() {
 
 		prev = 15 + i;
 	}
-
+	debugf("OK2\n");
 	// 覆写检查2
 	ssd_write_number(10, 110);
 	ssd_write_number(11, 111);

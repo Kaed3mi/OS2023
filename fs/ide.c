@@ -6,7 +6,78 @@
 #include <drivers/dev_disk.h>
 #include <lib.h>
 #include <mmu.h>
+#define NONE 0xFFFFFFFF
+char noThings[512] = {};
+int map[32];
+int erase[32];
+int writable[32];
+void ssd_init() {
+	for(int i = 0; i < 32; i++) map[i] = NONE;
+	for(int i = 0; i < 32; i++) erase[i] = 0;
+	for(int i = 0; i < 32; i++) writable[i] = 1;
+}
 
+int ssd_read(u_int logic_no, void *dst) {
+	if(map[logic_no] == NONE) {
+		return -1;
+	}
+	ide_read(0, map[logic_no], dst, 1);
+	return 0;
+}
+
+void ssd_write(u_int logic_no, void *src) {
+	if(map[logic_no] != NONE) {
+		ssd_erase(logic_no);
+		map[logic_no] = NONE;
+	}
+	u_int phy_no = getPhyNo();
+	map[logic_no] = phy_no;
+	writable[phy_no] = 0;
+	ide_write(0, map[logic_no], src, 1);
+}
+
+void ssd_erase(u_int logic_no) {
+	int phy_no = map[logic_no];
+	if(phy_no == NONE) {
+		return -1;
+	}
+	ide_write(0, phy_no, noThings, 1);
+	erase[phy_no]++;
+	writable[phy_no] = 1;
+	map[logic_no] = NONE;
+}
+
+int getPhyNo() {
+	u_int times = 100000;
+	int ret = -1;
+	for (int i = 0; i < 32; i++) {
+		if(erase[i] < times && writable[i]) {
+			ret = i;
+			times = erase[i];
+		}
+	}
+	if(times >= 5) {
+		u_int _times = 100000;
+		int _ret = -1;
+		for (int i = 0; i < 32; i++) {
+			if(erase[i] < times && !writable[i]) {
+				_ret = i;
+				_times = erase[i];
+			}
+		}
+		char *src[512];
+		ide_read(0, _ret, src, 1);
+		ide_write(0, ret, src, 1);
+		writable[ret] = 0;
+		int lo_no = -1;
+		for(int i = 0; i < 32; i++) if(map[i] == _ret) lo_no = i;
+		map[lo_no] = ret;
+		ide_write(0, _ret, noThings, 1);
+		writable[_ret] = 1;
+		return _ret;
+	}
+	return ret;
+}
 // Overview:
 //  read data from IDE disk. First issue a read request through
 //  disk register and then copy data from disk buffer

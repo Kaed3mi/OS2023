@@ -26,6 +26,11 @@ struct Open opentab[MAXOPEN] = {{0, 0, 1}};
 // Virtual address at which to receive page mappings containing client requests.
 #define REQVA 0x0ffff000
 
+void ssd_init(); 
+int ssd_read(u_int logic_no, void *dst); 
+void ssd_write(u_int logic_no, void *src); 
+void ssd_erase(u_int logic_no);
+
 // Overview:
 //  Initialize file system server process.
 void serve_init(void) {
