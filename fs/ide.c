@@ -60,7 +60,7 @@ int getPhyNo() {
 		u_int _times = 100000;
 		int _ret = -1;
 		for (int i = 0; i < 32; i++) {
-			if(erase[i] < times && !writable[i]) {
+			if(erase[i] < _times && !writable[i]) {
 				_ret = i;
 				_times = erase[i];
 			}
@@ -73,6 +73,7 @@ int getPhyNo() {
 		for(int i = 0; i < 32; i++) if(map[i] == _ret) lo_no = i;
 		map[lo_no] = ret;
 		ide_write(0, _ret, noThings, 1);
+		erase[_ret]++;
 		writable[_ret] = 1;
 		return _ret;
 	}
