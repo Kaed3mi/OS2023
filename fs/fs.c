@@ -8,6 +8,36 @@ uint32_t *bitmap;
 void file_flush(struct File *);
 int block_is_free(u_int);
 
+char *strcat(char *dst, char *src1, char *src2) {
+	strcpy(dst, src1);
+	strcpy(dst + strlen(src1), src2);
+	return dst;
+}
+
+void print_file(char *path) {
+	int fdnum = open(path, O_RDONLY);
+	struct Fd *fd = (struct Fd*) num2fd(fdnum);
+	struct Filefd *ffd = (struct Filefd*) fd;
+	
+	for (int i = 0; i < ffd->f_file.f_size / BY2BLK; i++) {
+		void *blk;
+		file_get_block(path, i, &blk);
+		struct File *files = (struct File *) blk;
+
+		for (struct File *f = files; f < files + FILE2BLK; f++) {
+			char tmp[MAXNAMELEN];
+			char full_name[MAXNAMELEN];
+			strcat(tmp, path, "/");
+			strcat(full_name, tmp, f->f_name);
+			if (f->f_type == FTYPE_DIR) {
+				print_file(full_name);
+			} else {
+				debugf("%s\n", f->f_name);
+			}
+		}
+	}
+}
+
 // Overview:
 //  Return the virtual address of this disk block in cache.
 // Hint: Use 'DISKMAP' and 'BY2BLK' to calculate the address.
