@@ -12,7 +12,8 @@
 #define vpd ((volatile Pde *)(UVPT + (PDX(UVPT) << PGSHIFT)))
 #define envs ((volatile struct Env *)UENVS)
 #define pages ((volatile struct Page *)UPAGES)
-
+int openat(int dirfd, const char *path, int mode);
+int fsipc_openat(u_int dir_fileid, const char *path, u_int omode, struct Fd * fd);
 // libos
 void exit(void) __attribute__((noreturn));
 

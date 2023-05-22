@@ -26,6 +26,40 @@ struct Open opentab[MAXOPEN] = {{0, 0, 1}};
 // Virtual address at which to receive page mappings containing client requests.
 #define REQVA 0x0ffff000
 
+void serve_openat(u_int envid, struct Fsreq_openat *rq) {
+	struct File *f;
+	struct Filefd *ff;
+	int r;
+	struct Open *o;
+
+	// Find a file id.
+	if ((r = open_alloc(&o)) < 0) {
+		ipc_send(envid, r, 0, 0);
+	}
+
+	struct Open *pOpen;
+	if ((r = open_lookup(envid, rq->dir_fileid, &pOpen)) < 0) {
+		ipc_send(envid, r, 0, 0);
+		return;
+	}
+	f = pOpen->o_file;
+
+	// Save the file pointer.
+	o->o_file = f;
+
+	// Fill out the Filefd structure
+	ff = (struct Filefd *)o->o_ff;
+	ff->f_file = *f;
+	ff->f_fileid = o->o_fileid;
+	o->o_mode = rq->req_omode;
+	ff->f_fd.fd_omode = o->o_mode;
+	ff->f_fd.fd_dev_id = devfile.dev_id;
+
+	ipc_send(envid, 0, o->o_ff, PTE_D | PTE_LIBRARY);
+}
+
+
+
 // Overview:
 //  Initialize file system server process.
 void serve_init(void) {
