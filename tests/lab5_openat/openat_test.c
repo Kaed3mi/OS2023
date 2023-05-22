@@ -8,7 +8,7 @@ int main() {
 		user_panic("open dir failed: %d", r);
 	}
 	dirfd = r;
-	debugf("OPENOK!\n");
+	//debugf("OPENOK!\n");
 	if ((r = openat(dirfd, "test_file", O_RDWR)) < 0) {
 		user_panic("openat file filed: %d", r);
 	}
@@ -22,7 +22,8 @@ int main() {
 		user_panic("read file failed");
 	}
 	buf[len] = '\0';
-
+	debugf("str = %s\n", str);
+	debugf("buf = %s\n", buf);
 	if (strcmp(str, buf) != 0) {
 		debugf("test openat failed\n");
 		return -1;

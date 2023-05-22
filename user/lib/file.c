@@ -20,13 +20,15 @@ struct Dev devfile = {
 };
 
 int openat(int dirfd, const char *path, int mod) {
-	struct Fd *fd;
+	struct Fd *fd, *dir;
 	try(fd_alloc(&fd));
-	fd_lookup(dirfd, &fd);
-	struct Filefd * dirFilefd= (struct Filefd *) fd;
-	int dirfid = dirFilefd->f_fileid;
-	fsipc_openat(dirfid, path, mod, fd);
-
+	//try(fd_alloc(&dir));
+	fd_lookup(dirfd, &dir);
+	struct Filefd * dirFilefd= (struct Filefd *) dir;
+	int dir_fileid = dirFilefd->f_fileid;
+	//debugf("here is ok\n");
+	fsipc_openat(dir_fileid, path, mod, fd);
+	//debugf("fsipc_openat OK!\n");
 	char *va;
 	struct Filefd *ffd;
 	u_int size, fileid;

@@ -42,8 +42,12 @@ void serve_openat(u_int envid, struct Fsreq_openat *rq) {
 		ipc_send(envid, r, 0, 0);
 		return;
 	}
-	f = pOpen->o_file;
+	struct File *dir =  pOpen->o_file;
 
+	if ((r = file_openat(dir, rq->req_path, &f)) < 0) {
+		ipc_send(envid, r, 0, 0);
+		return;
+	}
 	// Save the file pointer.
 	o->o_file = f;
 
@@ -277,7 +281,9 @@ void serve(void) {
 		case FSREQ_SYNC:
 			serve_sync(whom);
 			break;
-
+		case FSREQ_OPENAT:
+			serve_openat(whom, (struct Fsreq_open *)REQVA);
+			break;
 		default:
 			debugf("Invalid request code %d from %08x\n", whom, req);
 			break;

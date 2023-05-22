@@ -12,6 +12,7 @@ char *skip_slash(char *);
 
 int walk_path_at(struct File *par_dir, char *path, struct File **pdir,
 					 		struct File **pfile, char *lastelem){
+	debugf("enter wlak_path_at\n");
 	char *p; 	
 	char name[MAXNAMELEN]; 	
 	struct File *dir, *file; 	

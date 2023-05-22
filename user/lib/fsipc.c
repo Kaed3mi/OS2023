@@ -22,6 +22,7 @@ static int fsipc(u_int type, void *fsreq, void *dstva, u_int *perm) {
 	u_int whom;
 	// Our file system server must be the 2nd env.
 	ipc_send(envs[1].env_id, type, fsreq, PTE_D);
+	//debugf("ipc_send OK\n");
 	return ipc_recv(&whom, dstva, perm);
 }
 
@@ -38,6 +39,7 @@ int fsipc_openat(u_int dir_fileid, const char *path, u_int omode, struct Fd *fd)
          req->dir_fileid = dir_fileid;
          strcpy ((char *) req->req_path, path);
          req->req_omode = omode;
+	 //debugf("Ko ko is ok\n");
          return fsipc(FSREQ_OPENAT, req, fd, &perm);
  }
 
