@@ -236,8 +236,9 @@ struct File *create_file(struct File *dirf) {
 	// Step 2: If no unused file is found, allocate a new block using 'make_link_block' function
 	// and return a pointer to the new block on 'disk'.
 	/* Exercise 5.5: Your code here. (3/3) */
-
-	return (struct File*)(disk[make_link_block(dirf, nblk)].data);
+	int bno = make_link_block(dirf, nblk);
+	struct File *blk = (struct File*)(disk[bno].data);
+	return blk;
 }
 
 // Write file to disk under specified dir.

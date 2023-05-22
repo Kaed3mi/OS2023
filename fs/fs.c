@@ -154,6 +154,9 @@ void unmap_block(u_int blockno) {
 	void *va;
 	/* Exercise 5.7: Your code here. (3/5) */
 	va = block_is_mapped(blockno);
+	if (va == 0) {
+		return;
+	}
 	// Step 2: If this block is used (not free) and dirty in cache, write it back to the disk
 	// first.
 	// Hint: Use 'block_is_free', 'block_is_dirty' to check, and 'write_block' to sync.
