@@ -3,7 +3,10 @@
 
 #define WHITESPACE " \t\r\n"
 #define SYMBOLS "<|>&;()"
-
+#define MOVEUP(n) printf("\033[%dA", (n))
+#define MOVEDOWN(n) printf("\033[%dB", (n))
+#define MOVELEFT(n) printf("\033[%dD", (n))
+#define MOVERIGHT(n) printf("\033[%dC", (n))
 /* Overview:
  *   Parse the next token from the string at s.
  *
@@ -96,28 +99,30 @@ int parsecmd(char **argv, int *rightpipe) {
 				debugf("syntax error: < not followed by word\n");
 				exit();
 			}
-			// Open 't' for reading, dup it onto fd 0, and then close the original fd.
+			// Open 't' for reading, dup it onto fd 0, and then close the original
+			// fd.
 			/* Exercise 6.5: Your code here. (1/3) */
 			if ((r = open(t, O_RDONLY)) < 0) {
 				user_panic("user/sh.c:case '<': Exception: opening files!\n");
 			}
-            fd = r;
-            dup(fd, 0);
-            close(fd);
+			fd = r;
+			dup(fd, 0);
+			close(fd);
 			break;
 		case '>':
 			if (gettoken(0, &t) != 'w') {
 				debugf("syntax error: > not followed by word\n");
 				exit();
 			}
-			// Open 't' for writing, dup it onto fd 1, and then close the original fd.
+			// Open 't' for writing, dup it onto fd 1, and then close the original
+			// fd.
 			/* Exercise 6.5: Your code here. (2/3) */
 			if ((r = open(t, O_WRONLY)) < 0) {
 				user_panic("user/sh.c:case '>': Exception: opening files!\n");
 			}
-            fd = r;
-            dup(fd, 1);
-            close(fd);
+			fd = r;
+			dup(fd, 1);
+			close(fd);
 			break;
 
 		case '|':;
@@ -128,9 +133,8 @@ int parsecmd(char **argv, int *rightpipe) {
 			 * - dup the read end of the pipe onto 0
 			 * - close the read end of the pipe
 			 * - close the write end of the pipe
-			 * - and 'return parsecmd(argv, rightpipe)' again, to parse the rest of the
-			 *   command line.
-			 * The parent runs the left side of the pipe:
+			 * - and 'return parsecmd(argv, rightpipe)' again, to parse the rest of
+			 * the command line. The parent runs the left side of the pipe:
 			 * - dup the write end of the pipe onto 1
 			 * - close the write end of the pipe
 			 * - close the read end of the pipe
@@ -139,21 +143,20 @@ int parsecmd(char **argv, int *rightpipe) {
 			int p[2];
 			/* Exercise 6.5: Your code here. (3/3) */
 			pipe(p);
-            if ((*rightpipe = fork()) == 0) {
-                dup(p[0], 0);
-                close(p[0]);
-                close(p[1]);
-                return parsecmd(argv, rightpipe);
-            } else {
-                dup(p[1], 1);
-                close(p[1]);
-                close(p[0]);
-                return argc;
-            }
+			if ((*rightpipe = fork()) == 0) {
+				dup(p[0], 0);
+				close(p[0]);
+				close(p[1]);
+				return parsecmd(argv, rightpipe);
+			} else {
+				dup(p[1], 1);
+				close(p[1]);
+				close(p[0]);
+				return argc;
+			}
 			break;
 		case ';':
-			if ((*rightpipe = fork()) == 0) {
-				// 子进程执‘|’左侧的cmd
+			if ((*rightpipe = fork()) == 0) {  // 子进程执‘|’左侧的cmd
 				return argc;
 			} else {
 				// 父进程执行‘|’右侧的cmd
@@ -168,7 +171,6 @@ int parsecmd(char **argv, int *rightpipe) {
 				return parsecmd(argv, rightpipe);
 			}
 			break;
-
 		}
 	}
 
@@ -200,29 +202,87 @@ void runcmd(char *s) {
 }
 
 void readline(char *buf, u_int n) {
-	int r;
-	for (int i = 0; i < n; i++) {
-		if ((r = read(0, buf + i, 1)) != 1) {
+	int r, len = 0, i = 0;
+	char ch;
+	// i 表示当前控制台信息指针的下表
+	while (len < n) {
+		if ((r = read(0, &ch, 1)) != 1) {
 			if (r < 0) {
 				debugf("read error: %d\n", r);
 			}
 			exit();
 		}
-		if (buf[i] == '\b' || buf[i] == 0x7f) {
-			if (i > 0) {
-				i -= 2;
+		switch (ch) {
+		// Backspace
+		// case '\b':
+		case 0x7f:
+			if (i <= 0) {
+				break;
 			} else {
-				i = -1;
+				i--;
 			}
-			if (buf[i] != '\b') {
-				printf("\b");
+			for (int j = i + 1; j <= len - 1; j++) {
+				buf[j] = buf[j + 1];
 			}
-		}
-		if (buf[i] == '\r' || buf[i] == '\n') {
+			buf[--len] = 0;
+			MOVELEFT(i + 1);
+			printf("%s ", buf);
+			MOVELEFT(len - i + 1);
+			break;
+
+		// ← and →
+		// \033[D 表示左箭头	\033[C 表示右箭头
+		case '\033':
+			read(0, &ch, 1);
+			if (ch == '[') {
+				read(0, &ch, 1);
+				switch (ch) {
+				// 左箭头 ←
+				case 'D':
+					if (i > 0) {
+						i--;
+					} else {
+						MOVERIGHT(1);  // 右移光标
+					}
+					break;
+				// 右箭头 →
+				case 'C':
+					if (i < len) {
+						i++;
+					} else {
+						MOVELEFT(1);  // 左移光标
+					}
+					break;
+				case 'A':
+					MOVEDOWN(1);  // 下移光标
+					break;
+				case 'B':
+					break;
+				}
+			}
+			break;
+
+		case '\r':
+		case '\n':
 			buf[i] = 0;
 			return;
+
+		default:
+			buf[len + 1] = 0;
+			for (int j = len; j >= i + 1; j--) {
+				buf[j] = buf[j - 1];
+			}
+			buf[i++] = ch;
+			MOVELEFT(i);
+			printf("%s", buf);
+			if (len + 1 - i != 0) {
+				MOVELEFT(len + 1 - i);	// 左移光标
+			}
+			len++;
+			break;
 		}
 	}
+
 	debugf("line too long\n");
 	while ((r = read(0, buf, 1)) == 1 && buf[0] != '\r' && buf[0] != '\n') {
 		;
