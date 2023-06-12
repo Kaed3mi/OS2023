@@ -188,7 +188,15 @@ void runcmd(char *s) {
 	}
 	argv[argc] = 0;
 
-	int child = spawn(argv[0], argv);
+	int child;
+	if ((child = spawn(argv[0], argv)) < 0) {
+		char expanded[1024] = {};
+		strcpy(expanded, argv[0]);
+		int len = strlen(expanded);
+		strcpy(expanded + len, ".b");
+		child = spawn(expanded, argv);
+	}
+
 	close_all();
 	if (child >= 0) {
 		wait(child);
