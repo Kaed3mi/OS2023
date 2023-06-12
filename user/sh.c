@@ -41,6 +41,16 @@ int _gettoken(char *s, char **p1, char **p2) {
 		return t;
 	}
 
+	if (*s == '\"') {
+		*p1 = ++s;
+		while (*s && *s != '\"') {
+			s++;
+		}
+		*p2 = s;
+		*s++ = 0;
+		return 'w';
+	}
+
 	*p1 = s;
 	while (*s && !strchr(WHITESPACE SYMBOLS, *s)) {
 		s++;
@@ -140,26 +150,24 @@ int parsecmd(char **argv, int *rightpipe) {
                 close(p[0]);
                 return argc;
             }
-
 			break;
-
-			case ';':
+		case ';':
 			if ((*rightpipe = fork()) == 0) {
-                 // 子进程执‘|’左侧的cmd
-					return argc;
-				} else {
-                    // 父进程执行‘|’右侧的cmd
-					wait(*rightpipe);
-					return parsecmd(argv, rightpipe);
-				}
-				break;
-			case '&':
-				if (fork() == 0) {
-					return argc;
-				} else {
-					return parsecmd(argv, rightpipe);
-				}
-				break;
+				// 子进程执‘|’左侧的cmd
+				return argc;
+			} else {
+				// 父进程执行‘|’右侧的cmd
+				wait(*rightpipe);
+				return parsecmd(argv, rightpipe);
+			}
+			break;
+		case '&':
+			if (fork() == 0) {
+				return argc;
+			} else {
+				return parsecmd(argv, rightpipe);
+			}
+			break;
 
 		}
 	}
