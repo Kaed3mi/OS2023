@@ -88,8 +88,9 @@ int parsecmd(char **argv, int *rightpipe) {
 			}
 			// Open 't' for reading, dup it onto fd 0, and then close the original fd.
 			/* Exercise 6.5: Your code here. (1/3) */
-			r = open(t, O_RDONLY);
-            if (r < 0) user_panic("exception: opening files!\n");
+			if ((r = open(t, O_RDONLY)) < 0) {
+				user_panic("user/sh.c:case '<': Exception: opening files!\n");
+			}
             fd = r;
             dup(fd, 0);
             close(fd);
@@ -101,13 +102,14 @@ int parsecmd(char **argv, int *rightpipe) {
 			}
 			// Open 't' for writing, dup it onto fd 1, and then close the original fd.
 			/* Exercise 6.5: Your code here. (2/3) */
-			r = open(t, O_WRONLY);
-            if (r < 0) user_panic("exception: opening files!\n");
+			if ((r = open(t, O_WRONLY)) < 0) {
+				user_panic("user/sh.c:case '>': Exception: opening files!\n");
+			}
             fd = r;
             dup(fd, 1);
             close(fd);
-
 			break;
+			
 		case '|':;
 			/*
 			 * First, allocate a pipe.
@@ -127,7 +129,7 @@ int parsecmd(char **argv, int *rightpipe) {
 			int p[2];
 			/* Exercise 6.5: Your code here. (3/3) */
 			pipe(p);
-            if ((rightpipe = fork()) == 0) {
+            if ((*rightpipe = fork()) == 0) {
                 dup(p[0], 0);
                 close(p[0]);
                 close(p[1]);

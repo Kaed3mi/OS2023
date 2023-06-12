@@ -117,7 +117,10 @@ int spawn(char *prog, char **argv) {
 	u_char elfbuf[512];
 	/* Exercise 6.4: Your code here. (1/6) */
 	r = readn(fd, elfbuf, sizeof(Elf32_Ehdr));
-    if (r < 0) goto err;
+	if (r != sizeof(Elf32_Ehdr)) {
+		r = -E_FILE_EXISTS; // r = -12
+		goto err;
+	}
 
 	const Elf32_Ehdr *ehdr = elf_from(elfbuf, sizeof(Elf32_Ehdr));
 	if (!ehdr) {
@@ -130,15 +133,18 @@ int spawn(char *prog, char **argv) {
 	// If the syscall fails, set 'r' and 'goto err'.
 	u_int child;
 	/* Exercise 6.4: Your code here. (2/6) */
-	child = syscall_exofork();
-    if (child < 0) goto err;
+    if ((child = syscall_exofork()) < 0) {
+		r = child;
+		goto err;
+	}
 
 	// Step 4: Use 'init_stack(child, argv, &sp)' to initialize the stack of the child.
 	// 'goto err1' if that fails.
 	u_int sp;
 	/* Exercise 6.4: Your code here. (3/6) */
-	r = init_stack(child, argv, &sp);
-    if (r < 0) goto err1;
+	if(r = init_stack(child, argv, &sp) < 0) {
+		goto err1;
+	}
 
 	// Step 5: Load the ELF segments in the file into the child's memory.
 	// This is similar to 'load_icode()' in the kernel.
@@ -149,10 +155,13 @@ int spawn(char *prog, char **argv) {
 		// 'goto err1' on failure.
 		// You may want to use 'seek' and 'readn'.
 		/* Exercise 6.4: Your code here. (4/6) */
-		r = seek(fd, ph_off);
-        if (r < 0) goto err1;
-        r = readn(fd, elfbuf, ehdr->e_phentsize);
-        if (r < 0) goto err1;
+		if((r = seek(fd, ph_off)) < 0) {
+			goto err1;
+		}
+
+		if((r = readn(fd, elfbuf, ehdr->e_phentsize)) < 0) {
+			goto err1;
+		}
 
 		Elf32_Phdr *ph = (Elf32_Phdr *)elfbuf;
 		if (ph->p_type == PT_LOAD) {
@@ -161,15 +170,17 @@ int spawn(char *prog, char **argv) {
 			// using 'read_map()'.
 			// 'goto err1' if that fails.
 			/* Exercise 6.4: Your code here. (5/6) */
-			r = read_map(fd, ph->p_offset, &bin);
-            if (r < 0) goto err1;
+			if((r = read_map(fd, ph->p_offset, &bin) < 0)) {
+				goto err1;
+			}
 
 			// Load the segment 'ph' into the child's memory using 'elf_load_seg()'.
 			// Use 'spawn_mapper' as the callback, and '&child' as its data.
 			// 'goto err1' if that fails.
 			/* Exercise 6.4: Your code here. (6/6) */
-			r = elf_load_seg(ph, bin, spawn_mapper, &child);
-            if (r < 0) goto err1;
+			if((r = elf_load_seg(ph, bin, spawn_mapper, &child)) < 0) {
+				goto err1;
+			}
 
 		}
 	}
