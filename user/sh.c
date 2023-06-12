@@ -109,7 +109,7 @@ int parsecmd(char **argv, int *rightpipe) {
             dup(fd, 1);
             close(fd);
 			break;
-			
+
 		case '|':;
 			/*
 			 * First, allocate a pipe.
@@ -142,6 +142,25 @@ int parsecmd(char **argv, int *rightpipe) {
             }
 
 			break;
+
+			case ';':
+			if ((*rightpipe = fork()) == 0) {
+                 // 子进程执‘|’左侧的cmd
+					return argc;
+				} else {
+                    // 父进程执行‘|’右侧的cmd
+					wait(*rightpipe);
+					return parsecmd(argv, rightpipe);
+				}
+				break;
+			case '&':
+				if (fork() == 0) {
+					return argc;
+				} else {
+					return parsecmd(argv, rightpipe);
+				}
+				break;
+
 		}
 	}
 
