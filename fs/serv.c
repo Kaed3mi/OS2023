@@ -4,16 +4,17 @@
  */
 
 #include "serv.h"
+
 #include <fd.h>
 #include <fsreq.h>
 #include <lib.h>
 #include <mmu.h>
 
 struct Open {
-	struct File *o_file; // mapped descriptor for open file
-	u_int o_fileid;	     // file id
-	int o_mode;	     // open mode
-	struct Filefd *o_ff; // va of filefd page
+	struct File *o_file;  // mapped descriptor for open file
+	u_int o_fileid;		  // file id
+	int o_mode;			  // open mode
+	struct Filefd *o_ff;  // va of filefd page
 };
 
 // Max number of open files in the file system at once
@@ -201,6 +202,18 @@ void serve_sync(u_int envid) {
 	ipc_send(envid, 0, 0, 0);
 }
 
+void serve_create(u_int envid, struct Fsreq_create *rq) {
+	struct File *f;
+	int r;
+	if ((r = file_create(rq->req_path, &f)) < 0) {
+		ipc_send(envid, r, 0, 0);
+		return;
+	}
+	// touch 和 mkdir 的区别仅限于此，所以只需要控制这个值的传递就能实现两个函数
+	f->f_type = rq->f_type;
+	ipc_send(envid, 0, 0, 0);
+}
+
 void serve(void) {
 	u_int req, whom, perm;
 
@@ -212,7 +225,7 @@ void serve(void) {
 		// All requests must contain an argument page
 		if (!(perm & PTE_V)) {
 			debugf("Invalid request from %08x: no argument page\n", whom);
-			continue; // just leave it hanging, waiting for the next request.
+			continue;  // just leave it hanging, waiting for the next request.
 		}
 
 		switch (req) {
@@ -242,6 +255,10 @@ void serve(void) {
 
 		case FSREQ_SYNC:
 			serve_sync(whom);
+			break;
+
+		case FSREQ_CREATE:
+			serve_create(whom, (struct Fsreq_create *)REQVA);
 			break;
 
 		default:

@@ -2,12 +2,12 @@
 #include <lib.h>
 #include <mmu.h>
 
-#define PTE_DIRTY 0x0002 // file system block cache is dirty
+#define PTE_DIRTY 0x0002  // file system block cache is dirty
 
 /* IDE disk number to look on for our file system */
 #define DISKNO 1
 
-#define BY2SECT 512		    /* Bytes per disk sector */
+#define BY2SECT 512					/* Bytes per disk sector */
 #define SECT2BLK (BY2BLK / BY2SECT) /* sectors to a block */
 
 /* Disk block n, when in memory, is mapped into the file system
@@ -23,6 +23,7 @@ void ide_write(u_int diskno, u_int secno, void *src, u_int nsecs);
 
 /* fs.c */
 int file_open(char *path, struct File **pfile);
+int file_create(char *path, struct File **pfile);  // lab6 challenge
 int file_get_block(struct File *f, u_int blockno, void **pblk);
 int file_set_size(struct File *f, u_int newsize);
 void file_close(struct File *f);

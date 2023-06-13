@@ -30,12 +30,12 @@ void _user_halt(const char *, int, const char *, ...) __attribute__((noreturn));
 #define user_halt(...) _user_halt(__FILE__, __LINE__, __VA_ARGS__)
 
 #undef panic_on
-#define panic_on(expr)                                                                             \
-	do {                                                                                       \
-		int r = (expr);                                                                    \
-		if (r != 0) {                                                                      \
-			user_panic("'" #expr "' returned %d", r);                                  \
-		}                                                                                  \
+#define panic_on(expr)                                \
+	do {                                              \
+		int r = (expr);                               \
+		if (r != 0) {                                 \
+			user_panic("'" #expr "' returned %d", r); \
+		}                                             \
 	} while (0)
 
 /// fork, spawn
@@ -99,6 +99,7 @@ int fsipc_close(u_int);
 int fsipc_dirty(u_int, u_int);
 int fsipc_remove(const char *);
 int fsipc_sync(void);
+int fsipc_create(const char *, u_int);
 int fsipc_incref(u_int);
 
 // fd.c
@@ -114,15 +115,16 @@ int stat(const char *path, struct Stat *);
 
 // file.c
 int open(const char *path, int mode);
+int create(const char *path, int mode);
 int read_map(int fd, u_int offset, void **blk);
 int remove(const char *path);
 int ftruncate(int fd, u_int size);
 int sync(void);
 
-#define user_assert(x)                                                                             \
-	do {                                                                                       \
-		if (!(x))                                                                          \
-			user_panic("assertion failed: %s", #x);                                    \
+#define user_assert(x)                              \
+	do {                                            \
+		if (!(x))                                   \
+			user_panic("assertion failed: %s", #x); \
 	} while (0)
 
 // File open modes

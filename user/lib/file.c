@@ -11,12 +11,12 @@ static int file_stat(struct Fd *fd, struct Stat *stat);
 // Dot represents choosing the member within the struct declaration
 // to initialize, with no need to consider the order of members.
 struct Dev devfile = {
-    .dev_id = 'f',
-    .dev_name = "file",
-    .dev_read = file_read,
-    .dev_write = file_write,
-    .dev_close = file_close,
-    .dev_stat = file_stat,
+	.dev_id = 'f',
+	.dev_name = "file",
+	.dev_read = file_read,
+	.dev_write = file_write,
+	.dev_close = file_close,
+	.dev_stat = file_stat,
 };
 
 // Overview:
@@ -43,7 +43,7 @@ int open(const char *path, int mode) {
 	u_int size, fileid;
 	/* Exercise 5.9: Your code here. (3/5) */
 	va = fd2data(fd);
-	ffd = (struct Filed*) fd;
+	ffd = (struct Filed *)fd;
 	size = ffd->f_file.f_size;
 	fileid = ffd->f_fileid;
 	// Step 4: Alloc pages and map the file content using 'fsipc_map'.
@@ -55,6 +55,19 @@ int open(const char *path, int mode) {
 	// Step 5: Return the number of file descriptor using 'fd2num'.
 	/* Exercise 5.9: Your code here. (5/5) */
 	return fd2num(fd);
+}
+
+int create(const char *path, int mode) {
+	int r;
+	struct Fd *fd;
+	try(fd_alloc(&fd));
+	mode &= ~O_CREAT;
+	// 如果打开文件失败就进行文件创建，反之则报错（已存在文件，不能再创建）
+	if ((fsipc_open(path, mode, fd)) != 0) {
+		return fsipc_create(path, mode);  // mode = f_type
+	} else {
+		return 1;  // already exist.
+	}
 }
 
 // Overview:
@@ -253,4 +266,15 @@ int remove(const char *path) {
 //  Synchronize disk with buffer cache
 int sync(void) {
 	return fsipc_sync();
+}
+
+int mkdir(const char *path) {
+	int r;
+	if ((r = open(path, O_CREAT | FTYPE_DIR)) > 0) {
+		user_panic("mkdir: path %s already exist!\n", path);
+	}
+	if (r < 0) {
+		user_panic("mkdir %s: %d\n", path, r);
+	}
+	return r;
 }
