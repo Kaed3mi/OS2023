@@ -78,7 +78,7 @@ int sys_env_destroy(u_int envid) {
 	struct Env *e;
 	try(envid2env(envid, &e, 1));
 
-	printk("[%08x] destroying %08x\n", curenv->env_id, e->env_id);
+	// printk("[%08x] destroying %08x\n", curenv->env_id, e->env_id);
 	env_destroy(e);
 	return 0;
 }
@@ -177,7 +177,7 @@ int sys_mem_map(u_int srcid, u_int srcva, u_int dstid, u_int dstva, u_int perm) 
 	/* Exercise 4.5: Your code here. (1/4) */
 	if (is_illegal_va(srcva) || is_illegal_va(dstva)) {
 		return -E_INVAL;
-	}	
+	}
 	/* Step 2: Convert the 'srcid' to its corresponding 'struct Env *' using 'envid2env'. */
 	/* Exercise 4.5: Your code here. (2/4) */
 	try(envid2env(srcid, &srcenv, 1));
@@ -250,6 +250,8 @@ int sys_exofork(void) {
 	/* Exercise 4.9: Your code here. (4/4) */
 	e->env_status = ENV_NOT_RUNNABLE;
 	e->env_pri = curenv->env_pri;
+
+	strcpy(e->r_path, curenv->r_path);	// lab6 challenge
 	return e->env_id;
 }
 
@@ -453,15 +455,15 @@ int sys_cgetc(void) {
 int sys_write_dev(u_int va, u_int pa, u_int len) {
 	/* Exercise 5.1: Your code here. (1/2) */
 	if (is_illegal_va_range(va, len)) {
-    	return -E_INVAL;
-  	}
-  	if (!((pa >= 0x10000000 && (pa + len) <= 0x10000020) ||
-          (pa >= 0x13000000 && (pa + len) <= 0x13004200) ||
-          (pa >= 0x15000000 && (pa + len) <= 0x15000200))) {
-    	return -E_INVAL;
-  	}
+		return -E_INVAL;
+	}
+	if (!((pa >= 0x10000000 && (pa + len) <= 0x10000020) ||
+		  (pa >= 0x13000000 && (pa + len) <= 0x13004200) ||
+		  (pa >= 0x15000000 && (pa + len) <= 0x15000200))) {
+		return -E_INVAL;
+	}
 	memcpy((pa + KSEG1), va, len);
-  	return 0;
+	return 0;
 }
 
 /* Overview:
@@ -478,36 +480,54 @@ int sys_write_dev(u_int va, u_int pa, u_int len) {
 int sys_read_dev(u_int va, u_int pa, u_int len) {
 	/* Exercise 5.1: Your code here. (2/2) */
 	if (is_illegal_va_range(va, len)) {
-    	return -E_INVAL;
-  	}
-  	if (!((pa >= 0x10000000 && (pa + len) <= 0x10000020) ||
-          (pa >= 0x13000000 && (pa + len) <= 0x13004200) ||
-          (pa >= 0x15000000 && (pa + len) <= 0x15000200))) {
-    	return -E_INVAL;
-  	}
+		return -E_INVAL;
+	}
+	if (!((pa >= 0x10000000 && (pa + len) <= 0x10000020) ||
+		  (pa >= 0x13000000 && (pa + len) <= 0x13004200) ||
+		  (pa >= 0x15000000 && (pa + len) <= 0x15000200))) {
+		return -E_INVAL;
+	}
 	memcpy(va, (pa + KSEG1), len);
 	return 0;
 }
 
+int sys_set_rpath(char *newPath) {
+	if (strlen(newPath) > 1024) {
+		return -1;
+	}
+	strcpy(curenv->r_path, newPath);
+	return 0;
+}
+
+int sys_get_rpath(char *dst) {
+	if (dst == 0) {
+		return -1;
+	}
+	strcpy(dst, curenv->r_path);
+	return 0;
+}
+
 void *syscall_table[MAX_SYSNO] = {
-    [SYS_putchar] = sys_putchar,
-    [SYS_print_cons] = sys_print_cons,
-    [SYS_getenvid] = sys_getenvid,
-    [SYS_yield] = sys_yield,
-    [SYS_env_destroy] = sys_env_destroy,
-    [SYS_set_tlb_mod_entry] = sys_set_tlb_mod_entry,
-    [SYS_mem_alloc] = sys_mem_alloc,
-    [SYS_mem_map] = sys_mem_map,
-    [SYS_mem_unmap] = sys_mem_unmap,
-    [SYS_exofork] = sys_exofork,
-    [SYS_set_env_status] = sys_set_env_status,
-    [SYS_set_trapframe] = sys_set_trapframe,
-    [SYS_panic] = sys_panic,
-    [SYS_ipc_try_send] = sys_ipc_try_send,
-    [SYS_ipc_recv] = sys_ipc_recv,
-    [SYS_cgetc] = sys_cgetc,
-    [SYS_write_dev] = sys_write_dev,
-    [SYS_read_dev] = sys_read_dev,
+	[SYS_putchar] = sys_putchar,
+	[SYS_print_cons] = sys_print_cons,
+	[SYS_getenvid] = sys_getenvid,
+	[SYS_yield] = sys_yield,
+	[SYS_env_destroy] = sys_env_destroy,
+	[SYS_set_tlb_mod_entry] = sys_set_tlb_mod_entry,
+	[SYS_mem_alloc] = sys_mem_alloc,
+	[SYS_mem_map] = sys_mem_map,
+	[SYS_mem_unmap] = sys_mem_unmap,
+	[SYS_exofork] = sys_exofork,
+	[SYS_set_env_status] = sys_set_env_status,
+	[SYS_set_trapframe] = sys_set_trapframe,
+	[SYS_panic] = sys_panic,
+	[SYS_ipc_try_send] = sys_ipc_try_send,
+	[SYS_ipc_recv] = sys_ipc_recv,
+	[SYS_cgetc] = sys_cgetc,
+	[SYS_write_dev] = sys_write_dev,
+	[SYS_read_dev] = sys_read_dev,
+	[SYS_get_rpath] = sys_get_rpath,
+	[SYS_set_rpath] = sys_set_rpath,
 };
 
 /* Overview:

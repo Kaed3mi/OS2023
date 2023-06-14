@@ -177,6 +177,46 @@ int parsecmd(char **argv, int *rightpipe) {
 	return argc;
 }
 
+void cd(char **argv) {
+	int r;
+	struct Stat st = {0};
+	char cur[1024] = {0};
+	char *p = argv[1];
+
+	if (argv[1][0] != '/') {
+		if (argv[1][0] == '.') {
+			p += 2;
+		}
+		syscall_get_rpath(cur);
+		int len1 = strlen(cur);
+		int len2 = strlen(p);
+		if (len1 == 1) {  // cur: '/'
+			strcpy(cur + 1, p);
+		} else {  // cur: '/a'
+			cur[len1] = '/';
+			strcpy(cur + len1 + 1, p);
+			cur[len1 + 1 + len2] = '\0';
+		}
+
+	} else {
+		strcpy(cur, argv[1]);
+	}
+	// printf("%s\n", cur);
+
+	if ((r = stat(cur, &st)) < 0) {
+		printf("cd: %s: 没有那个文件或目录\n", p);
+		return;
+	}
+	if (!st.st_isdir) {
+		printf("cd: %s: 不是目录\n", p);
+		return;
+	}
+	if ((r = chdir(cur)) < 0) {
+		printf("cd: %s: 切换目录异常\n", p);
+	}
+	return;
+}
+
 void runcmd(char *s) {
 	gettoken(s, 0);
 
@@ -188,25 +228,71 @@ void runcmd(char *s) {
 	}
 	argv[argc] = 0;
 
-	int child;
-	if ((child = spawn(argv[0], argv)) < 0) {
-		char expanded[1024] = {};
-		strcpy(expanded, argv[0]);
-		int len = strlen(expanded);
-		strcpy(expanded + len, ".b");
-		child = spawn(expanded, argv);
+	if (strcmp("cd", argv[0]) == 0) {
+		cd(argv);
+		return;
 	}
 
-	close_all();
-	if (child >= 0) {
-		wait(child);
+	int r;
+	if ((r = fork()) < 0) {
+		user_panic("fork: %d", r);
+	}
+	if (r == 0) {
+		int child;
+		// 判断加了".b"是否可以运行
+		if ((child = spawn(argv[0], argv)) < 0) {
+			char expanded[1024] = {};
+			strcpy(expanded, argv[0]);
+			int len = strlen(expanded);
+			strcpy(expanded + len, ".b");
+			child = spawn(expanded, argv);
+		}
+		close_all();
+		if (child >= 0) {
+			wait(child);
+		} else {
+			debugf("spawn %s: %d\n", argv[0], child);
+		}
+		if (rightpipe) {
+			wait(rightpipe);
+		}
+		exit();
 	} else {
-		debugf("spawn %s: %d\n", argv[0], child);
+		wait(r);
 	}
-	if (rightpipe) {
-		wait(rightpipe);
+}
+
+static int hisCnt, hisPos;	// hisPos表示当前指令是第几个历史指令，hisCnt表示一共有多少个历史指令
+static int hisBufLen[1024];
+static char curCmd[1024];  // 用来缓存当前输入的指令
+
+int cleanCmd(int i, int len) {
+	if (i != 0) {
+		MOVELEFT(i);
 	}
-	exit();
+	for (int j = 0; j < len; j++) {
+		printf(" ");
+	}
+	if (len != 0) {
+		MOVELEFT(len);
+	}
+	return 0;
+}
+
+int readHisCmd(int hisPos, char *buf) {
+	int r, fd, spot = 0;
+	char buff[10240];
+	fd = open("/.history", O_RDONLY);
+	for (int i = 0; i < hisPos; i++) {
+		spot += (hisBufLen[i] + 1);	 // 寻找偏移
+	}
+	readn(fd, buf, spot);
+	readn(fd, buf, hisBufLen[hisPos]);
+	close(fd);
+
+	buf[hisBufLen[hisPos]] = '\0';
+	// debugf("readHisCmd : %s\n", buf);
+	return 0;
 }
 
 void readline(char *buf, u_int n) {
@@ -222,14 +308,11 @@ void readline(char *buf, u_int n) {
 		}
 		switch (ch) {
 		// Backspace
-		// case '\b':
 		case 0x7f:
 			if (i <= 0) {
 				break;
-			} else {
-				i--;
 			}
-			for (int j = i + 1; j <= len - 1; j++) {
+			for (int j = --i; j < len - 1; j++) {
 				buf[j] = buf[j + 1];
 			}
 			buf[--len] = 0;
@@ -261,10 +344,39 @@ void readline(char *buf, u_int n) {
 						MOVELEFT(1);  // 左移光标
 					}
 					break;
+				// 上箭头
 				case 'A':
 					MOVEDOWN(1);  // 下移光标
+					// debugf("上: hisPos = %d\n", hisPos);
+					if (hisPos > 0) {
+						if (hisPos == hisCnt) {
+							// 缓存当前输入的指令
+							strcpy(curCmd, buf);
+							// debugf("\ncurCmd = %s\n", curCmd);
+						}
+						hisPos--;
+						cleanCmd(i, len);
+						readHisCmd(hisPos, buf);
+						printf("%s", buf);
+						i = strlen(buf);
+						len = i;  // 重定位光标指针
+					}
 					break;
+				// 下箭头
 				case 'B':
+					// debugf("下: hisPos = %d\n", hisPos);
+					cleanCmd(i, len);
+					if (hisPos < hisCnt) {
+						hisPos++;
+					}
+					if (hisPos < hisCnt) {
+						readHisCmd(hisPos, buf);
+					} else if (hisPos == hisCnt) {
+						strcpy(buf, curCmd);
+					}
+					printf("%s", buf);
+					i = strlen(buf);
+					len = i;  // 重定位光标指针
 					break;
 				}
 			}
@@ -272,15 +384,29 @@ void readline(char *buf, u_int n) {
 
 		case '\r':
 		case '\n':
-			buf[i] = 0;
+
+			if (hisCnt == 0) {
+				try(touch("/.history"));
+			}
+			int hisFd;
+			hisFd = open("/.history", O_APPEND | O_WRONLY);
+			write(hisFd, buf, len);
+			write(hisFd, "\n", 1);
+			close(hisFd);
+			hisBufLen[hisCnt++] = len;
+			hisPos = hisCnt;
+			// debugf("hisCnt = %d, hisPos = %d\n", hisCnt, hisPos);
+			memset(curCmd, 0, sizeof(curCmd));
 			return;
 
 		default:
-			buf[len + 1] = 0;
+			// 将字符ch插入buf
 			for (int j = len; j >= i + 1; j--) {
 				buf[j] = buf[j - 1];
 			}
+			buf[len + 1] = '\0';
 			buf[i++] = ch;
+
 			MOVELEFT(i);
 			printf("%s", buf);
 			if (len + 1 - i != 0) {
@@ -309,6 +435,8 @@ int main(int argc, char **argv) {
 	int r;
 	int interactive = iscons(0);
 	int echocmds = 0;
+	char cwd[256] = {};
+	printf("\033[2J");	// 清屏
 	debugf("\n:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::\n");
 	debugf("::                                                         ::\n");
 	debugf("::                     MOS Shell 2023                      ::\n");
@@ -338,7 +466,12 @@ int main(int argc, char **argv) {
 	}
 	for (;;) {
 		if (interactive) {
-			printf("\n$ ");
+			getcwd(cwd);
+			printf("\033[5;1;32mmos@21373512\033[0m");
+			printf(":");
+			printf("\033[5;1;34m~%s \033[0m", cwd);
+			printf("\033[5;0;31m[%08x]\033[0m", syscall_getenvid());
+			printf(" $ ");
 		}
 		readline(buf, sizeof buf);
 
@@ -348,15 +481,7 @@ int main(int argc, char **argv) {
 		if (echocmds) {
 			printf("# %s\n", buf);
 		}
-		if ((r = fork()) < 0) {
-			user_panic("fork: %d", r);
-		}
-		if (r == 0) {
-			runcmd(buf);
-			exit();
-		} else {
-			wait(r);
-		}
+		runcmd(buf);
 	}
 	return 0;
 }

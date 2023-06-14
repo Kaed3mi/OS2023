@@ -27,12 +27,30 @@ struct Dev devfile = {
 //  the underlying error on failure.
 int open(const char *path, int mode) {
 	int r;
-
+	char ppath[1024] = {0};
 	// Step 1: Alloc a new 'Fd' using 'fd_alloc' in fd.c.
 	// Hint: return the error code if failed.
 	struct Fd *fd;
 	/* Exercise 5.9: Your code here. (1/5) */
 	try(fd_alloc(&fd));
+	if (path[0] != '/') {
+		if (path[0] == '.') {
+			path += 2;
+		}
+
+		syscall_get_rpath(ppath);
+		int len1 = strlen(ppath);
+		int len2 = strlen(path);
+		if (len1 == 1) {  // ppath: '/'
+			strcpy(ppath + 1, path);
+		} else {  // ppath: '/a'
+			ppath[len1] = '/';
+			strcpy(ppath + len1 + 1, path);
+			ppath[len1 + 1 + len2] = '\0';
+		}
+	} else {
+		strcpy(ppath, path);
+	}
 	// Step 2: Prepare the 'fd' using 'fsipc_open' in fsipc.c.
 	/* Exercise 5.9: Your code here. (2/5) */
 	try(fsipc_open(path, mode, fd));
@@ -68,6 +86,14 @@ int create(const char *path, int mode) {
 	} else {
 		return 1;  // already exist.
 	}
+}
+
+int chdir(char *newPath) {
+	return syscall_set_rpath(newPath);
+}
+
+int getcwd(char *path) {
+	return syscall_get_rpath(path);
 }
 
 // Overview:
@@ -270,11 +296,22 @@ int sync(void) {
 
 int mkdir(const char *path) {
 	int r;
-	if ((r = open(path, O_CREAT | FTYPE_DIR)) > 0) {
-		user_panic("mkdir: path %s already exist!\n", path);
+	if ((r = create(path, O_CREAT | FTYPE_DIR)) > 0) {
+		printf("mkdir: 无法创建目录 \"%s\": 目录已存在\n", path);
 	}
 	if (r < 0) {
-		user_panic("mkdir %s: %d\n", path, r);
+		printf("mkdir: 无法创建目录 \"%s\": 未知错误\n", path);
+	}
+	return r;
+}
+
+int touch(const char *path) {
+	int r;
+	if ((r = create(path, O_CREAT | FTYPE_REG)) > 0) {
+		// printf("touch: 无法创建文件 \"%s\": 文件已存在\n", path);
+	}
+	if (r < 0) {
+		printf("touch: 无法创建文件 \"%s\": 未知错误\n", path);
 	}
 	return r;
 }

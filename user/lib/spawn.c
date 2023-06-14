@@ -70,8 +70,7 @@ int init_stack(u_int child, char **argv, u_int *init_sp) {
 	// Set *init_sp to the initial stack pointer for the child
 	*init_sp = USTACKTOP - UTEMP - BY2PG + (u_int)pargv_ptr;
 
-	if ((r = syscall_mem_map(0, (void *)UTEMP, child, (void *)(USTACKTOP - BY2PG), PTE_D)) <
-	    0) {
+	if ((r = syscall_mem_map(0, (void *)UTEMP, child, (void *)(USTACKTOP - BY2PG), PTE_D)) < 0) {
 		goto error;
 	}
 	if ((r = syscall_mem_unmap(0, (void *)UTEMP)) < 0) {
@@ -86,7 +85,7 @@ error:
 }
 
 static int spawn_mapper(void *data, u_long va, size_t offset, u_int perm, const void *src,
-			size_t len) {
+						size_t len) {
 	u_int child_id = *(u_int *)data;
 	try(syscall_mem_alloc(child_id, (void *)va, perm));
 	if (src != NULL) {
@@ -105,7 +104,14 @@ int spawn(char *prog, char **argv) {
 	// Step 1: Open the file 'prog' (the path of the program).
 	// Return the error if 'open' fails.
 	int fd;
-	if ((fd = open(prog, O_RDONLY)) < 0) {
+	char path[1024] = {0};
+	if (prog[0] != '/') {
+		path[0] = '/';
+		strcpy(path + 1, prog);
+	} else {
+		strcpy(path, prog);
+	}
+	if ((fd = open(path, O_RDONLY)) < 0) {
 		return fd;
 	}
 
@@ -118,7 +124,7 @@ int spawn(char *prog, char **argv) {
 	/* Exercise 6.4: Your code here. (1/6) */
 	r = readn(fd, elfbuf, sizeof(Elf32_Ehdr));
 	if (r != sizeof(Elf32_Ehdr)) {
-		r = -E_FILE_EXISTS; // r = -12
+		r = -E_FILE_EXISTS;	 // r = -12
 		goto err;
 	}
 
@@ -133,7 +139,7 @@ int spawn(char *prog, char **argv) {
 	// If the syscall fails, set 'r' and 'goto err'.
 	u_int child;
 	/* Exercise 6.4: Your code here. (2/6) */
-    if ((child = syscall_exofork()) < 0) {
+	if ((child = syscall_exofork()) < 0) {
 		r = child;
 		goto err;
 	}
@@ -142,24 +148,24 @@ int spawn(char *prog, char **argv) {
 	// 'goto err1' if that fails.
 	u_int sp;
 	/* Exercise 6.4: Your code here. (3/6) */
-	if(r = init_stack(child, argv, &sp) < 0) {
+	if (r = init_stack(child, argv, &sp) < 0) {
 		goto err1;
 	}
 
 	// Step 5: Load the ELF segments in the file into the child's memory.
 	// This is similar to 'load_icode()' in the kernel.
 	size_t ph_off;
-	ELF_FOREACH_PHDR_OFF (ph_off, ehdr) {
+	ELF_FOREACH_PHDR_OFF(ph_off, ehdr) {
 		// Read the program header in the file with offset 'ph_off' and length
 		// 'ehdr->e_phentsize' into 'elfbuf'.
 		// 'goto err1' on failure.
 		// You may want to use 'seek' and 'readn'.
 		/* Exercise 6.4: Your code here. (4/6) */
-		if((r = seek(fd, ph_off)) < 0) {
+		if ((r = seek(fd, ph_off)) < 0) {
 			goto err1;
 		}
 
-		if((r = readn(fd, elfbuf, ehdr->e_phentsize)) < 0) {
+		if ((r = readn(fd, elfbuf, ehdr->e_phentsize)) < 0) {
 			goto err1;
 		}
 
@@ -170,7 +176,7 @@ int spawn(char *prog, char **argv) {
 			// using 'read_map()'.
 			// 'goto err1' if that fails.
 			/* Exercise 6.4: Your code here. (5/6) */
-			if((r = read_map(fd, ph->p_offset, &bin) < 0)) {
+			if ((r = read_map(fd, ph->p_offset, &bin) < 0)) {
 				goto err1;
 			}
 
@@ -178,10 +184,9 @@ int spawn(char *prog, char **argv) {
 			// Use 'spawn_mapper' as the callback, and '&child' as its data.
 			// 'goto err1' if that fails.
 			/* Exercise 6.4: Your code here. (6/6) */
-			if((r = elf_load_seg(ph, bin, spawn_mapper, &child)) < 0) {
+			if ((r = elf_load_seg(ph, bin, spawn_mapper, &child)) < 0) {
 				goto err1;
 			}
-
 		}
 	}
 	close(fd);

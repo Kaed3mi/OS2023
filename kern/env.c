@@ -10,17 +10,17 @@
 // Our bitmap requires this to be a multiple of 32.
 #define NASID 64
 
-struct Env envs[NENV] __attribute__((aligned(BY2PG))); // All environments
+struct Env envs[NENV] __attribute__((aligned(BY2PG)));	// All environments
 
-struct Env *curenv = NULL;	      // the current env
-static struct Env_list env_free_list; // Free list
+struct Env *curenv = NULL;			   // the current env
+static struct Env_list env_free_list;  // Free list
 
 // Invariant: 'env' in 'env_sched_list' iff. 'env->env_status' is 'RUNNABLE'.
-struct Env_sched_list env_sched_list; // Runnable list
+struct Env_sched_list env_sched_list;  // Runnable list
 
 static Pde *base_pgdir;
 
-static uint32_t asid_bitmap[NASID / 32] = {0}; // 64
+static uint32_t asid_bitmap[NASID / 32] = {0};	// 64
 
 /* Overview:
  *  Allocate an unused ASID.
@@ -65,7 +65,6 @@ static void asid_free(u_int i) {
  *   'pa', 'va' and 'size' are aligned to 'BY2PG'.
  */
 static void map_segment(Pde *pgdir, u_int asid, u_long pa, u_long va, u_int size, u_int perm) {
-
 	assert(pa % BY2PG == 0);
 	assert(va % BY2PG == 0);
 	assert(size % BY2PG == 0);
@@ -165,7 +164,7 @@ void env_init(void) {
 	 * list should be the same as they are in the 'envs' array. */
 
 	/* Exercise 3.1: Your code here. (2/2) */
-	for(i = NENV - 1; i >= 0; i--) {
+	for (i = NENV - 1; i >= 0; i--) {
 		envs[i].env_status = ENV_FREE;
 		LIST_INSERT_HEAD(&env_free_list, &envs[i], env_link);
 	}
@@ -183,9 +182,9 @@ void env_init(void) {
 
 	base_pgdir = (Pde *)page2kva(p);
 	map_segment(base_pgdir, 0, PADDR(pages), UPAGES, ROUND(npage * sizeof(struct Page), BY2PG),
-		    PTE_G);
+				PTE_G);
 	map_segment(base_pgdir, 0, PADDR(envs), UENVS, ROUND(NENV * sizeof(struct Env), BY2PG),
-		    PTE_G);
+				PTE_G);
 }
 
 /* Overview:
@@ -210,7 +209,7 @@ static int env_setup_vm(struct Env *e) {
 	 *   See include/mmu.h for layout.
 	 */
 	memcpy(e->env_pgdir + PDX(UTOP), base_pgdir + PDX(UTOP),
-	       sizeof(Pde) * (PDX(UVPT) - PDX(UTOP)));
+		   sizeof(Pde) * (PDX(UVPT) - PDX(UTOP)));
 
 	/* Step 3: Map its own page table at 'UVPT' with readonly permission.
 	 * As a result, user programs can read its page table through 'UVPT' */
@@ -243,7 +242,7 @@ int env_alloc(struct Env **new, u_int parent_id) {
 
 	/* Step 1: Get a free Env from 'env_free_list' */
 	/* Exercise 3.4: Your code here. (1/4) */
-	if(LIST_EMPTY(&env_free_list))
+	if (LIST_EMPTY(&env_free_list))
 		return -E_NO_FREE_ENV;
 	e = LIST_FIRST(&env_free_list);
 	/* Step 2: Call a 'env_setup_vm' to initialize the user address space for this new Env. */
@@ -257,8 +256,8 @@ int env_alloc(struct Env **new, u_int parent_id) {
 	 *   Use 'asid_alloc' to allocate a free asid.
 	 *   Use 'mkenvid' to allocate a free envid.
 	 */
-	e->env_user_tlb_mod_entry = 0; // for lab4
-	e->env_runs = 0;	       // for lab6
+	e->env_user_tlb_mod_entry = 0;	// for lab4
+	e->env_runs = 0;				// for lab6
 	/* Exercise 3.4: Your code here. (3/4) */
 	try(asid_alloc(&e->env_asid));
 	e->env_id = mkenvid(e);
@@ -268,7 +267,7 @@ int env_alloc(struct Env **new, u_int parent_id) {
 	e->env_tf.cp0_status = STATUS_IM4 | STATUS_KUp | STATUS_IEp;
 	// Keep space for 'argc' and 'argv'.
 	e->env_tf.regs[29] = USTACKTOP - sizeof(int) - sizeof(char **);
-
+	strcpy(e->r_path, "/");
 	/* Step 5: Remove the new Env from env_free_list. */
 	/* Exercise 3.4: Your code here. (4/4) */
 	LIST_REMOVE(e, env_link);
@@ -289,7 +288,7 @@ int env_alloc(struct Env **new, u_int parent_id) {
  *
  */
 static int load_icode_mapper(void *data, u_long va, size_t offset, u_int perm, const void *src,
-			     size_t len) {
+							 size_t len) {
 	struct Env *env = (struct Env *)data;
 	struct Page *p;
 	int r;
@@ -302,7 +301,7 @@ static int load_icode_mapper(void *data, u_long va, size_t offset, u_int perm, c
 	// Hint: You may want to use 'memcpy'.
 	if (src != NULL) {
 		/* Exercise 3.5: Your code here. (2/2) */
-		memcpy((void *)(page2kva(p)+offset) ,src, len);
+		memcpy((void *)(page2kva(p) + offset), src, len);
 	}
 
 	/* Step 3: Insert 'p' into 'env->env_pgdir' at 'va' with 'perm'. */
@@ -325,7 +324,7 @@ static void load_icode(struct Env *e, const void *binary, size_t size) {
 	 * As a loader, we just care about loadable segments, so parse only program headers here.
 	 */
 	size_t ph_off;
-	ELF_FOREACH_PHDR_OFF (ph_off, ehdr) {
+	ELF_FOREACH_PHDR_OFF(ph_off, ehdr) {
 		Elf32_Phdr *ph = (Elf32_Phdr *)(binary + ph_off);
 		if (ph->p_type == PT_LOAD) {
 			// 'elf_load_seg' is defined in lib/elfloader.c
@@ -373,7 +372,7 @@ void env_free(struct Env *e) {
 	u_int pdeno, pteno, pa;
 
 	/* Hint: Note the environment's demise.*/
-	printk("[%08x] free env %08x\n", curenv ? curenv->env_id : 0, e->env_id);
+	// printk("[%08x] free env %08x\n", curenv ? curenv->env_id : 0, e->env_id);
 
 	/* Hint: Flush all mapped pages in the user portion of the address space */
 	for (pdeno = 0; pdeno < PDX(UTOP); pdeno++) {
@@ -388,7 +387,7 @@ void env_free(struct Env *e) {
 		for (pteno = 0; pteno <= PTX(~0); pteno++) {
 			if (pt[pteno] & PTE_V) {
 				page_remove(e->env_pgdir, e->env_asid,
-					    (pdeno << PDSHIFT) | (pteno << PGSHIFT));
+							(pdeno << PDSHIFT) | (pteno << PGSHIFT));
 			}
 		}
 		/* Hint: free the page table itself. */
@@ -419,7 +418,7 @@ void env_destroy(struct Env *e) {
 	/* Hint: schedule to run a new environment. */
 	if (curenv == e) {
 		curenv = NULL;
-		printk("i am killed ... \n");
+		// printk("i am killed ... \n");
 		schedule(1);
 	}
 }
@@ -442,7 +441,7 @@ static inline void pre_env_run(struct Env *e) {
 	u_int epc = tf->cp0_epc;
 	if (epc == MOS_SCHED_END_PC) {
 		printk("env %08x reached end pc: 0x%08x, $v0=0x%08x\n", e->env_id, epc,
-		       tf->regs[2]);
+			   tf->regs[2]);
 		env_destroy(e);
 		schedule(0);
 	}
@@ -462,7 +461,7 @@ extern void env_pop_tf(struct Trapframe *tf, u_int asid) __attribute__((noreturn
  */
 void env_run(struct Env *e) {
 	assert(e->env_status == ENV_RUNNABLE);
-	pre_env_run(e); // WARNING: DO NOT MODIFY THIS LINE!
+	pre_env_run(e);	 // WARNING: DO NOT MODIFY THIS LINE!
 
 	/* Step 1:
 	 *   If 'curenv' is NULL, this is the first time through.
@@ -475,7 +474,7 @@ void env_run(struct Env *e) {
 
 	/* Step 2: Change 'curenv' to 'e'. */
 	curenv = e;
-	curenv->env_runs++; // lab6
+	curenv->env_runs++;	 // lab6
 
 	/* Step 3: Change 'cur_pgdir' to 'curenv->env_pgdir', switching to its address space. */
 	/* Exercise 3.8: Your code here. (1/2) */

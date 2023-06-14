@@ -24,7 +24,7 @@ void printFile(char *name, int depth, int isEnd, int isDir) {
 }
 
 void dfsDir(char *path, int depth) {
-	int fdnum, size, va, j, len;
+	int fdnum, size, va;
 	struct Fd *fd;
 	struct File f;
 
@@ -76,11 +76,7 @@ void tree(char *path) {
 
 	printf("%s\n", path);
 	dfsDir(path, 0);
-	if (directory == 1) {
-		printf("\n%d directories\n", dircCount);
-	} else {
-		printf("\n%d directories, %d files\n", dircCount, fileCount);
-	}
+	printf("\n%d directories, %d files\n", dircCount, fileCount);
 }
 
 void usage(void) {
@@ -99,7 +95,7 @@ int main(int argc, char **argv) {
 	}
 	ARGEND
 	if (argc == 0) {
-		tree("/");
+		tree("./");
 	} else {
 		tree(argv[0]);
 	}

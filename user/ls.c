@@ -53,7 +53,11 @@ void ls1(char *prefix, u_int isdir, u_int size, char *name) {
 		}
 		printf("%s%s", prefix, sep);
 	}
-	printf("%s", name);
+	if (isdir == 1) {
+		printf("\033[1;34m%s\033[0m", name);
+	} else {
+		printf("%s", name);
+	}
 	if (flag['F'] && isdir) {
 		printf("/");
 	}
@@ -80,7 +84,7 @@ int main(int argc, char **argv) {
 	ARGEND
 
 	if (argc == 0) {
-		ls("/", "");
+		ls("./", "");
 	} else {
 		for (i = 0; i < argc; i++) {
 			ls(argv[i], argv[i]);
