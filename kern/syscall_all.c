@@ -491,19 +491,23 @@ int sys_read_dev(u_int va, u_int pa, u_int len) {
 	return 0;
 }
 
-int sys_set_rpath(char *newPath) {
+int sys_set_rpath(u_int envid, char *newPath) {
 	if (strlen(newPath) > 1024) {
 		return -1;
 	}
-	strcpy(curenv->r_path, newPath);
+	struct Env *e;
+	envid2env(envid, &e, 0);
+	strcpy(e->r_path, newPath);
 	return 0;
 }
 
-int sys_get_rpath(char *dst) {
+int sys_get_rpath(u_int envid, char *dst) {
 	if (dst == 0) {
 		return -1;
 	}
-	strcpy(dst, curenv->r_path);
+	struct Env *e;
+	envid2env(envid, &e, 0);
+	strcpy(dst, e->r_path);
 	return 0;
 }
 

@@ -68,8 +68,8 @@ int syscall_ipc_recv(void *dstva);
 int syscall_cgetc();
 int syscall_write_dev(void *, u_int, u_int);
 int syscall_read_dev(void *, u_int, u_int);
-int syscall_set_rpath(char *newPath);
-int syscall_get_rpath(char *dst);
+int syscall_set_rpath(u_int envid, char *newPath);
+int syscall_get_rpath(u_int envid, char *dst);
 
 // ipc.c
 void ipc_send(u_int whom, u_int val, const void *srcva, u_int perm);
@@ -119,7 +119,9 @@ int stat(const char *path, struct Stat *);
 int open(const char *path, int mode);
 int create(const char *path, int mode);
 int chdir(char *newPath);
+int chshdir(char *newPath);
 int getcwd(char *path);
+int getshcwd(char *path);
 int read_map(int fd, u_int offset, void **blk);
 int remove(const char *path);
 int ftruncate(int fd, u_int size);

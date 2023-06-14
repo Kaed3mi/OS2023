@@ -75,10 +75,10 @@ int syscall_read_dev(void *va, u_int dev, u_int len) {
 	return msyscall(SYS_read_dev, va, dev, len);
 }
 
-int syscall_set_rpath(char *newPath) {
-	return msyscall(SYS_set_rpath, newPath);
+int syscall_set_rpath(u_int envid, char *newPath) {
+	return msyscall(SYS_set_rpath, envid, newPath);
 }
 
-int syscall_get_rpath(char *dst) {
-	return msyscall(SYS_get_rpath, dst);
+int syscall_get_rpath(u_int envid, char *dst) {
+	return msyscall(SYS_get_rpath, envid, dst);
 }

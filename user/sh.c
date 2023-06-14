@@ -156,10 +156,10 @@ int parsecmd(char **argv, int *rightpipe) {
 			}
 			break;
 		case ';':
-			if ((*rightpipe = fork()) == 0) {  // 子进程执‘|’左侧的cmd
+			if ((*rightpipe = fork()) == 0) {  // 子进程执‘;’左侧的cmd
 				return argc;
 			} else {
-				// 父进程执行‘|’右侧的cmd
+				// 父进程执行‘;’右侧的cmd
 				wait(*rightpipe);
 				return parsecmd(argv, rightpipe);
 			}
@@ -177,46 +177,6 @@ int parsecmd(char **argv, int *rightpipe) {
 	return argc;
 }
 
-void cd(char **argv) {
-	int r;
-	struct Stat st = {0};
-	char cur[1024] = {0};
-	char *p = argv[1];
-
-	if (argv[1][0] != '/') {
-		if (argv[1][0] == '.') {
-			p += 2;
-		}
-		syscall_get_rpath(cur);
-		int len1 = strlen(cur);
-		int len2 = strlen(p);
-		if (len1 == 1) {  // cur: '/'
-			strcpy(cur + 1, p);
-		} else {  // cur: '/a'
-			cur[len1] = '/';
-			strcpy(cur + len1 + 1, p);
-			cur[len1 + 1 + len2] = '\0';
-		}
-
-	} else {
-		strcpy(cur, argv[1]);
-	}
-	// printf("%s\n", cur);
-
-	if ((r = stat(cur, &st)) < 0) {
-		printf("cd: %s: 没有那个文件或目录\n", p);
-		return;
-	}
-	if (!st.st_isdir) {
-		printf("cd: %s: 不是目录\n", p);
-		return;
-	}
-	if ((r = chdir(cur)) < 0) {
-		printf("cd: %s: 切换目录异常\n", p);
-	}
-	return;
-}
-
 void runcmd(char *s) {
 	gettoken(s, 0);
 
@@ -228,38 +188,25 @@ void runcmd(char *s) {
 	}
 	argv[argc] = 0;
 
-	if (strcmp("cd", argv[0]) == 0) {
-		cd(argv);
-		return;
+	int child;
+	// 判断加了".b"是否可以运行
+	if ((child = spawn(argv[0], argv)) < 0) {
+		char expanded[1024] = {};
+		strcpy(expanded, argv[0]);
+		int len = strlen(expanded);
+		strcpy(expanded + len, ".b");
+		child = spawn(expanded, argv);
 	}
-
-	int r;
-	if ((r = fork()) < 0) {
-		user_panic("fork: %d", r);
-	}
-	if (r == 0) {
-		int child;
-		// 判断加了".b"是否可以运行
-		if ((child = spawn(argv[0], argv)) < 0) {
-			char expanded[1024] = {};
-			strcpy(expanded, argv[0]);
-			int len = strlen(expanded);
-			strcpy(expanded + len, ".b");
-			child = spawn(expanded, argv);
-		}
-		close_all();
-		if (child >= 0) {
-			wait(child);
-		} else {
-			debugf("spawn %s: %d\n", argv[0], child);
-		}
-		if (rightpipe) {
-			wait(rightpipe);
-		}
-		exit();
+	close_all();
+	if (child >= 0) {
+		wait(child);
 	} else {
-		wait(r);
+		debugf("spawn %s: %d\n", argv[0], child);
 	}
+	if (rightpipe) {
+		wait(rightpipe);
+	}
+	exit();
 }
 
 static int hisCnt, hisPos;	// hisPos表示当前指令是第几个历史指令，hisCnt表示一共有多少个历史指令
@@ -481,7 +428,15 @@ int main(int argc, char **argv) {
 		if (echocmds) {
 			printf("# %s\n", buf);
 		}
-		runcmd(buf);
+		int r;
+		if ((r = fork()) < 0) {
+			user_panic("fork: %d", r);
+		}
+		if (r == 0) {
+			runcmd(buf);
+		} else {
+			wait(r);
+		}
 	}
 	return 0;
 }

@@ -37,6 +37,7 @@ ifeq ($(call lab-ge,6), true)
 			tree.b \
 			mkdir.b \
 			touch.b \
+			cd.b \
 			pwd.b \
 			testpipe.b \
 			testpiperace.b \

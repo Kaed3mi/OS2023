@@ -38,7 +38,7 @@ int open(const char *path, int mode) {
 			path += 2;
 		}
 
-		syscall_get_rpath(ppath);
+		getcwd(ppath);
 		int len1 = strlen(ppath);
 		int len2 = strlen(path);
 		if (len1 == 1) {  // ppath: '/'
@@ -89,13 +89,20 @@ int create(const char *path, int mode) {
 }
 
 int chdir(char *newPath) {
-	return syscall_set_rpath(newPath);
+	return syscall_set_rpath(syscall_getenvid(), newPath);
+}
+
+int chshdir(char *newPath) {
+	return syscall_set_rpath(0x2000, newPath);
 }
 
 int getcwd(char *path) {
-	return syscall_get_rpath(path);
+	return syscall_get_rpath(syscall_getenvid(), path);
 }
 
+int getshcwd(char *path) {
+	return syscall_get_rpath(0x2000, path);
+}
 // Overview:
 //  Close a file descriptor
 int file_close(struct Fd *fd) {
