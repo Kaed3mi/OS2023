@@ -37,6 +37,7 @@ ifeq ($(call lab-ge,6), true)
 			tree.b \
 			mkdir.b \
 			touch.b \
+			history.b \
 			cd.b \
 			pwd.b \
 			testbgd.b \

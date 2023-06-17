@@ -88,7 +88,7 @@ void tree(char *path) {
 		exit();
 	}
 
-	printf("%s\n", path);
+	printf("%s\n", st.st_name);
 	linked[0] = 1;
 	dfsDir(path, 0);
 	printf("\n%d directories, %d files\n", dircCount, fileCount);
