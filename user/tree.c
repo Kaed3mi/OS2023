@@ -4,10 +4,15 @@
 int directory = 0;
 int dircCount = 0;
 int fileCount = 0;
+int linked[32];
 
 void printFile(char *name, int depth, int isEnd, int isDir) {
 	for (int i = 0; i < depth; i++) {
-		printf("    ");
+		if (linked[i]) {
+			printf("│   ");
+		} else {
+			printf("    ");
+		}
 	}
 
 	if (isEnd == 0) {
@@ -33,8 +38,10 @@ void dfsDir(char *path, int depth) {
 	}
 	fd = (struct Fd *)num2fd(fdnum);
 	f = ((struct Filefd *)fd)->f_file;
-	if (f.f_type != FTYPE_DIR) {
+	if (f.f_type == FTYPE_REG) {
+		close(fdnum);
 		fileCount++;
+		close(fdnum);
 		return;
 	} else {
 		dircCount++;
@@ -52,11 +59,18 @@ void dfsDir(char *path, int depth) {
 		int pathLen = strlen(path);
 		int nameLen = strlen(dirName);
 		strcpy(nextPath, path);
-		nextPath[pathLen] = '/';
-		strcpy(nextPath + pathLen + 1, dirName);
+		if (path[pathLen - 1] != '/') {
+			nextPath[pathLen++] = '/';
+		}
+		nextPath[pathLen] = 0;
+		strcpy(nextPath + pathLen, dirName);
 		int isEnd = (i == size || (file + 1)->f_name[0] == 0) ? 1 : 0;
+		if (!isEnd) {
+			linked[depth] = 1;
+		}
 		printFile(dirName, depth, isEnd, file->f_type == FTYPE_DIR);
 		dfsDir(nextPath, depth + 1);
+		linked[depth] = 0;
 	}
 }
 
@@ -75,6 +89,7 @@ void tree(char *path) {
 	}
 
 	printf("%s\n", path);
+	linked[0] = 1;
 	dfsDir(path, 0);
 	printf("\n%d directories, %d files\n", dircCount, fileCount);
 }
@@ -100,5 +115,5 @@ int main(int argc, char **argv) {
 		tree(argv[0]);
 	}
 
-	return 0;
+	exit();
 }

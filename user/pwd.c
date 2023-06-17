@@ -11,10 +11,10 @@ int main(int argc, char **argv) {
 		usage();
 		exit();
 	} else {
-		char path[128] = {0};
+		char path[256] = {0};
 		getcwd(path);
 		printf("%s\n", path);
 	}
 
-	return 0;
+	exit();
 }

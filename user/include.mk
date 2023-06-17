@@ -39,6 +39,7 @@ ifeq ($(call lab-ge,6), true)
 			touch.b \
 			cd.b \
 			pwd.b \
+			testbgd.b \
 			testpipe.b \
 			testpiperace.b \
 			testptelibrary.b \

@@ -103,6 +103,10 @@ void serve_open(u_int envid, struct Fsreq_open *rq) {
 		return;
 	}
 
+	if (rq->req_omode & O_TRUNC) {
+		file_truncate(f, 0);
+	}
+
 	// Save the file pointer.
 	o->o_file = f;
 
@@ -264,6 +268,7 @@ void serve(void) {
 
 		case FSREQ_CREATE:
 			serve_create(whom, (struct Fsreq_create *)REQVA);
+
 			break;
 
 		default:

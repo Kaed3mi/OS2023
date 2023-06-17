@@ -27,7 +27,7 @@ struct Dev devfile = {
 //  the underlying error on failure.
 int open(const char *path, int mode) {
 	int r;
-	char ppath[1024] = {0};
+	char abpath[1024] = {0};  // abpath为绝对路径
 	// Step 1: Alloc a new 'Fd' using 'fd_alloc' in fd.c.
 	// Hint: return the error code if failed.
 	struct Fd *fd;
@@ -38,22 +38,33 @@ int open(const char *path, int mode) {
 			path += 2;
 		}
 
-		getcwd(ppath);
-		int len1 = strlen(ppath);
-		int len2 = strlen(path);
-		if (len1 == 1) {  // ppath: '/'
-			strcpy(ppath + 1, path);
-		} else {  // ppath: '/a'
-			ppath[len1] = '/';
-			strcpy(ppath + len1 + 1, path);
-			ppath[len1 + 1 + len2] = '\0';
+		getchcwd(abpath);
+		int ablen = strlen(abpath);
+		int pathlen = strlen(path);
+		if (ablen == 1) {  // abpath: '/'
+			strcpy(abpath + 1, path);
+		} else {  // abpath: '/path'
+			abpath[ablen] = '/';
+			strcpy(abpath + ablen + 1, path);
+			abpath[ablen + 1 + pathlen] = '\0';
 		}
 	} else {
-		strcpy(ppath, path);
+		strcpy(abpath, path);
 	}
 	// Step 2: Prepare the 'fd' using 'fsipc_open' in fsipc.c.
 	/* Exercise 5.9: Your code here. (2/5) */
-	try(fsipc_open(path, mode, fd));
+	if (mode & O_CREAT) {
+		mode &= ~O_CREAT;
+		if ((r = fsipc_open(abpath, mode, fd)) != 0) {
+			return fsipc_create(abpath, mode);
+		} else {
+			return 1;  // 文件存在
+		}
+	} else {
+		if ((r = fsipc_open(abpath, mode, fd)) != 0) {
+			return r;
+		}
+	}
 	// Step 3: Set 'va' to the address of the page where the 'fd''s data is cached, using
 	// 'fd2data'. Set 'size' and 'fileid' correctly with the value in 'fd' as a 'Filefd'.
 	char *va;
@@ -75,19 +86,6 @@ int open(const char *path, int mode) {
 	return fd2num(fd);
 }
 
-int create(const char *path, int mode) {
-	int r;
-	struct Fd *fd;
-	try(fd_alloc(&fd));
-	mode &= ~O_CREAT;
-	// 如果打开文件失败就进行文件创建，反之则报错（已存在文件，不能再创建）
-	if ((fsipc_open(path, mode, fd)) != 0) {
-		return fsipc_create(path, mode);  // mode = f_type
-	} else {
-		return 1;  // already exist.
-	}
-}
-
 int chdir(char *newPath) {
 	return syscall_set_rpath(syscall_getenvid(), newPath);
 }
@@ -100,7 +98,7 @@ int getcwd(char *path) {
 	return syscall_get_rpath(syscall_getenvid(), path);
 }
 
-int getshcwd(char *path) {
+int getchcwd(char *path) {
 	return syscall_get_rpath(0x2000, path);
 }
 // Overview:
@@ -303,7 +301,7 @@ int sync(void) {
 
 int mkdir(const char *path) {
 	int r;
-	if ((r = create(path, O_CREAT | FTYPE_DIR)) > 0) {
+	if ((r = open(path, O_CREAT | FTYPE_DIR)) > 0) {
 		printf("mkdir: 无法创建目录 \"%s\": 目录已存在\n", path);
 	}
 	if (r < 0) {
@@ -314,7 +312,8 @@ int mkdir(const char *path) {
 
 int touch(const char *path) {
 	int r;
-	if ((r = create(path, O_CREAT | FTYPE_REG)) > 0) {
+
+	if ((r = open(path, O_CREAT | FTYPE_REG)) > 0) {
 		// printf("touch: 无法创建文件 \"%s\": 文件已存在\n", path);
 	}
 	if (r < 0) {

@@ -1,4 +1,3 @@
-#include <fs.h>
 #include <lib.h>
 
 void usage(void) {
@@ -14,5 +13,5 @@ int main(int argc, char **argv) {
 			touch(argv[i]);
 		}
 	}
-	return 0;
+	exit();
 }

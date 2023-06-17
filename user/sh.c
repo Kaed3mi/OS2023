@@ -22,6 +22,7 @@
  *   The buffer is modified to turn the spaces after words into zero bytes ('\0'), so that the
  *   returned token is a null-terminated string.
  */
+
 int _gettoken(char *s, char **p1, char **p2) {
 	*p1 = 0;
 	*p2 = 0;
@@ -44,13 +45,13 @@ int _gettoken(char *s, char **p1, char **p2) {
 		return t;
 	}
 
-	if (*s == '\"') {
-		*p1 = ++s;
-		while (*s && *s != '\"') {
+	if (*s == '"') {
+		*p1 = ++s;	// p1为第一个"的后一个字符
+		while (*s && *s != '"') {
 			s++;
 		}
+		*(s++) = 0;
 		*p2 = s;
-		*s++ = 0;
 		return 'w';
 	}
 
@@ -102,7 +103,7 @@ int parsecmd(char **argv, int *rightpipe) {
 			// Open 't' for reading, dup it onto fd 0, and then close the original
 			// fd.
 			/* Exercise 6.5: Your code here. (1/3) */
-			if ((r = open(t, O_RDONLY)) < 0) {
+			if ((r = open(t, O_RDONLY | O_TRUNC)) < 0) {
 				user_panic("user/sh.c:case '<': Exception: opening files!\n");
 			}
 			fd = r;
@@ -117,7 +118,9 @@ int parsecmd(char **argv, int *rightpipe) {
 			// Open 't' for writing, dup it onto fd 1, and then close the original
 			// fd.
 			/* Exercise 6.5: Your code here. (2/3) */
-			if ((r = open(t, O_WRONLY)) < 0) {
+
+			touch(t);
+			if ((r = open(t, O_WRONLY | O_TRUNC)) < 0) {
 				user_panic("user/sh.c:case '>': Exception: opening files!\n");
 			}
 			fd = r;
@@ -156,7 +159,8 @@ int parsecmd(char **argv, int *rightpipe) {
 			}
 			break;
 		case ';':
-			if ((*rightpipe = fork()) == 0) {  // 子进程执‘;’左侧的cmd
+			if ((*rightpipe = fork()) == 0) {
+				// 子进程执‘;’左侧的cmd
 				return argc;
 			} else {
 				// 父进程执行‘;’右侧的cmd
@@ -184,8 +188,9 @@ void runcmd(char *s) {
 	int rightpipe = 0;
 	int argc = parsecmd(argv, &rightpipe);
 	if (argc == 0) {
-		return;
+		exit();
 	}
+
 	argv[argc] = 0;
 
 	int child;
@@ -256,7 +261,7 @@ void readline(char *buf, u_int n) {
 		switch (ch) {
 		// Backspace
 		case 0x7f:
-			if (i <= 0) {
+			if (i == 0) {
 				break;
 			}
 			for (int j = --i; j < len - 1; j++) {
@@ -302,7 +307,7 @@ void readline(char *buf, u_int n) {
 							// debugf("\ncurCmd = %s\n", curCmd);
 						}
 						hisPos--;
-						cleanCmd(i, len);
+						cleanCmd(i, len);  // 用于清空当前回显的命令
 						readHisCmd(hisPos, buf);
 						printf("%s", buf);
 						i = strlen(buf);
@@ -331,7 +336,6 @@ void readline(char *buf, u_int n) {
 
 		case '\r':
 		case '\n':
-
 			if (hisCnt == 0) {
 				try(touch("/.history"));
 			}
@@ -376,6 +380,71 @@ char buf[1024];
 void usage(void) {
 	debugf("usage: sh [-dix] [command-file]\n");
 	exit();
+}
+
+int builtinCheck(char *buf) {
+	if (buf[0] == 'c' && buf[1] == 'd' && (buf[2] == 0 || buf[2] == ' ')) {
+	} else {
+		return 0;
+	}
+	int len = strlen(buf);
+	for (int i = 0; i < buf; i++) {
+		if (buf[i] == '<' || buf[i] == '|' || buf[i] == '>' || buf[i] == ';' || buf[i] == '&') {
+			return 0;
+		}
+	}
+	return 1;
+}
+
+void builtinCd(char *s) {
+	printf("builtin cd\n");
+	gettoken(s, 0);
+
+	char *argv[MAXARGS];
+	int rightpipe = 0;
+	int argc = parsecmd(argv, &rightpipe);
+	if (argc == 0) {
+		return;
+	}
+
+	argv[argc] = 0;
+	int r;
+	struct Stat st = {0};
+	char cur[1024] = {0};
+	// 以上是runcmd的内容
+	if (argc == 1) {
+		return;
+	} else if (argv[1][0] != '/') {
+		char *p = argv[1];
+		if (argv[1][0] == '.') {
+			p += 2;
+		}
+		getcwd(cur);
+		int len1 = strlen(cur);
+		int len2 = strlen(p);
+		if (len1 == 1) {  // cur: '/'
+			strcpy(cur + 1, p);
+		} else {  // cur: '/path'
+			cur[len1] = '/';
+			strcpy(cur + len1 + 1, p);
+			cur[len1 + 1 + len2] = '\0';
+		}
+	} else {
+		strcpy(cur, argv[1]);
+	}
+	// printf("%s\n", cur);
+	if ((r = stat(cur, &st)) < 0) {
+		printf("cd: %s: 没有那个文件或目录\n", argv[1]);
+		return;
+	}
+	if (!st.st_isdir) {
+		printf("cd: %s: 不是目录\n", argv[1]);
+		return;
+	}
+	if ((r = chdir(cur)) < 0) {
+		printf("cd: %s: 切换目录异常\n", argv[1]);
+	}
+	return;
 }
 
 int main(int argc, char **argv) {
@@ -429,7 +498,10 @@ int main(int argc, char **argv) {
 			printf("# %s\n", buf);
 		}
 		int r;
-		if ((r = fork()) < 0) {
+		if (builtinCheck(buf)) {
+			builtinCd(buf);
+			continue;
+		} else if ((r = fork()) < 0) {
 			user_panic("fork: %d", r);
 		}
 		if (r == 0) {

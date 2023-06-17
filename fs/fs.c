@@ -1,5 +1,6 @@
-#include "serv.h"
 #include <mmu.h>
+
+#include "serv.h"
 
 struct Super *super;
 
@@ -16,13 +17,13 @@ char *strcat(char *dst, char *src1, char *src2) {
 
 void print_file(char *path) {
 	int fdnum = open(path, O_RDONLY);
-	struct Fd *fd = (struct Fd*) num2fd(fdnum);
-	struct Filefd *ffd = (struct Filefd*) fd;
-	
+	struct Fd *fd = (struct Fd *)num2fd(fdnum);
+	struct Filefd *ffd = (struct Filefd *)fd;
+
 	for (int i = 0; i < ffd->f_file.f_size / BY2BLK; i++) {
 		void *blk;
 		file_get_block(path, i, &blk);
-		struct File *files = (struct File *) blk;
+		struct File *files = (struct File *)blk;
 
 		for (struct File *f = files; f < files + FILE2BLK; f++) {
 			char tmp[MAXNAMELEN];
@@ -143,11 +144,11 @@ int read_block(u_int blockno, void **blk, u_int *isnew) {
 	//  If this block is already mapped, just set *isnew, else alloc memory and
 	//  read data from IDE disk (use `syscall_mem_alloc` and `ide_read`).
 	//  We have only one IDE disk, so the diskno of ide_read should be 0.
-	if (block_is_mapped(blockno)) { // the block is in memory
+	if (block_is_mapped(blockno)) {	 // the block is in memory
 		if (isnew) {
 			*isnew = 0;
 		}
-	} else { // the block is not in memory
+	} else {  // the block is not in memory
 		if (isnew) {
 			*isnew = 1;
 		}
@@ -169,7 +170,7 @@ int map_block(u_int blockno) {
 	// Hint: Use 'block_is_mapped'.
 	/* Exercise 5.7: Your code here. (1/5) */
 	if (block_is_mapped(blockno)) {
-			return 0;
+		return 0;
 	}
 	// Step 2: Alloc a page in permission 'PTE_D' via syscall.
 	// Hint: Use 'diskaddr' for the virtual address.
@@ -243,9 +244,9 @@ int alloc_block_num(void) {
 	// walk through this bitmap, find a free one and mark it as used, then sync
 	// this block to IDE disk (using `write_block`) from memory.
 	for (blockno = 3; blockno < super->s_nblocks; blockno++) {
-		if (bitmap[blockno / 32] & (1 << (blockno % 32))) { // the block is free
+		if (bitmap[blockno / 32] & (1 << (blockno % 32))) {	 // the block is free
 			bitmap[blockno / 32] &= ~(1 << (blockno % 32));
-			write_block(blockno / BIT2BLK + 2); // write to disk.
+			write_block(blockno / BIT2BLK + 2);	 // write to disk.
 			return blockno;
 		}
 	}
@@ -258,7 +259,7 @@ int alloc_block_num(void) {
 int alloc_block(void) {
 	int r, bno;
 	// Step 1: find a free block.
-	if ((r = alloc_block_num()) < 0) { // failed.
+	if ((r = alloc_block_num()) < 0) {	// failed.
 		return r;
 	}
 	bno = r;
@@ -574,7 +575,7 @@ int dir_alloc_file(struct File *dir, struct File **file) {
 		f = blk;
 
 		for (j = 0; j < FILE2BLK; j++) {
-			if (f[j].f_name[0] == '\0') { // found free File structure.
+			if (f[j].f_name[0] == '\0') {  // found free File structure.
 				*file = &f[j];
 				return 0;
 			}
